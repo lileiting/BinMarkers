@@ -167,9 +167,9 @@ sub cluster_markers{
                 unless $cal_times{$marker_index};
         }
         $matrix{$marker_index}->{cluster} = $cluster;
-        print_log("$count: Num_of_seeds => ".@seeds.", 
-                  Cal_times => $cal_times{$marker_index}, 
-                  Cluster of $marker_index => ", 
+        print_log("$count: Num_of_seeds => ", scalar(@seeds),
+                  ", Cal_times => $cal_times{$marker_index}",
+                  ", Cluster of $marker_index => ", 
                   $matrix{$marker_index}->{cluster});
     }
 }
