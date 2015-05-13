@@ -35,7 +35,8 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
         Specify missing genotypes
         Default: --,..,-,.,u
         
-  -h, --help      print this usage message
+  -h, --help      
+        print this usage message
   
 EOF
     exit;
@@ -234,7 +235,6 @@ sub judge_genotype{
 
 sub consensus_marker{
     my $block_id = shift;
-    my $marker_name = shift;
     my @marker_indexes = @_;
     my @consensus_marker;
 
@@ -243,7 +243,7 @@ sub consensus_marker{
         my @genotypes = map{$matrix{$_}->{array}->[$i]}@marker_indexes;
         push @consensus_marker, judge_genotype(\@genotypes);
     }
-    return [$marker_name, @consensus_marker];
+    return @consensus_marker;
 }
 
 my %block_contents;
@@ -290,7 +290,7 @@ sub cluster_markers{
                            $start_position : 
                            "$start_position-$end_position";
         my $marker_name = "bin_${start_scaffold}_$pos_info($block_size)";
-        $bin_marker{$block_id} = consensus_marker($block_id, $marker_name, @block);
+        $bin_marker{$block_id} = [$marker_name, consensus_marker($block_id, @block)];
 
         print_log("$marker_name: ", join(", ", map{$matrix{$_}->{array}->[0]}@block));
     }
@@ -341,7 +341,6 @@ sub main{
     message "Print bin markers ...";
     print_bin_markers($bin_markers_file);
     message "Done!";
-    
 
     hr;
     message "Some log information is in file: $log_file";
