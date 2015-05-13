@@ -257,7 +257,6 @@ sub cluster_markers{
         LABEL: for(my $j = $i + 1; $j <= $#sorted_marker_index; $j++){
             my $new_marker_index = $sorted_marker_index[$j];
             $end_scaffold = $matrix{$new_marker_index}->{scaffold};
-            $end_position = $matrix{$new_marker_index}->{position};
             
             # Stop searching with these conditions
             last LABEL if $end_scaffold ne $start_scaffold;
@@ -269,6 +268,7 @@ sub cluster_markers{
             # Add a marker to a block
             push @block, $new_marker_index;
             $i++;
+            $end_position = $matrix{$new_marker_index}->{position};
         }
         #-- End dynamic searching
         
