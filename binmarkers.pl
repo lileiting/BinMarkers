@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use Getopt::Long;
 
 #--Preset--#
 my $author = "Leiting Li";
@@ -11,24 +12,51 @@ sub message {local $\ = "\n"; print STDERR @_}
 sub usage{
     print <<EOF;
 
-perl binmarkers.pl <MARKER_MATRIX> [THRESHOLD]
+perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
 
   MARKER_MATRIX  Scafold/contig and position information
                  as marker name, '-' or '_' as seperator,
 
-  THRESHOLD      Maximum difference allowed within a block,
-                 default: 5
+  OPTIONS
+  
+  -t,--threshold  
+        Maximum difference allowed within a block,
+        default: 5
 
+  -e,--heterozygous 
+        Specify heterogygous genotypes
+        Default: lm,np,hk,h
+        
+  -o,--homologous
+        Specify homologous genotypes
+        Default: ll,nn,hh,kk,a,b
+        
+  -h, --help      print this usage message
+  
 EOF
     exit;
 }
-usage unless @ARGV;
 
-my ($infile,$threshold) = @ARGV;
-$threshold = 5 unless $threshold;
-
-my @homologous_genotype = qw/ll nn hh kk a b/;
+my $infile;
+my $threshold = 5;
+my $help;
 my @heterozygous_genotype = qw/lm np hk h/;
+my @homologous_genotype = qw/ll nn hh kk a b/;
+
+GetOptions(
+  "t|threshold=s" => \$threshold,
+  "h|help" => \$help,
+  "e|heterozygous=s" => \@heterozygous_genotype,
+  "o|homologous=s" => \@homologous_genotype
+) or die("Error in command line arguments");
+@heterozygous_genotype = split(/,/,join(',',@heterozygous_genotype));
+@homologous_genotype = split(/,/,join(',',@homologous_genotype));
+
+usage if $help;
+
+$infile = shift @ARGV;
+usage unless $infile;
+
 my @valid_genotype = (@homologous_genotype, @heterozygous_genotype);
 my @missing_genotype = qw/-- .. - ./;
 my @all_genotypes = (@valid_genotype, @missing_genotype);
@@ -45,6 +73,7 @@ my %bin_marker;
 my $num_of_rand_select = 0;
 my $num_of_filled_missing = 0;
 my $num_of_heterozygous_select = 0;
+my $num_of_countif_select = 0;
 
 my $log_file = "$infile.bin_markers_$threshold.log";
 my $bin_markers_file = "$infile.bin_markers_$threshold.map";
@@ -118,7 +147,7 @@ sub load_marker_matrix{
     open my $fh, $file or die;
     while(my $marker = <$fh>){
         chomp $marker;
-        my $ref = [split /\t/, $marker];
+        my $ref = [split /\s+/, $marker];
         my ($scaffold, $position) = split /[\-_]/, $ref->[0];
         next if with_title $ref;
         checking_genotypes $ref;
@@ -157,12 +186,14 @@ sub select_genotype{
     
     if(@valid_genotypes == 2){
         if($countif{$first} > $countif{$second}){
+            $num_of_countif_select++;
             return $first;
         }else{
             return equal_case_select($first, $second);
         }
     }elsif(@valid_genotypes == 3){
         if($countif{$first} > $countif{$second}){
+            $num_of_countif_select++;
             return $first;
         }elsif($countif{$second} > $countif{$third}){
             return equal_case_select($first, $second);
@@ -280,6 +311,8 @@ sub print_marker_matrix{
     close $out_fh;
 }
 
+sub hr{message '-' x 60}
+
 sub main{
     message "Loading marker matrix ...";
     load_marker_matrix($infile);
@@ -298,17 +331,19 @@ sub main{
     message "Done!";
     
 
-    message "-" x 60;
+    hr;
     message "Some log information is in file: $log_file";
     message "Marker matrix for manual checking is in file: $manual_checking_file";
     message "Final bin markers for further analysis if in file: $bin_markers_file";
-    message "-" x 60;
+    hr;
     message "Total number of markers: $num_of_markers";
     message "Bin markers: $num_of_bin_markers";
-    message "$num_of_rand_select genotypes were random selected!";
-    message "$num_of_filled_missing missing genotypes was filled";
-    message "Selection based on heterozygous markers: $num_of_heterozygous_select";
+    message "$num_of_countif_select genotypes were determined based which present the most";
+    message "$num_of_rand_select genotypes were random determined!";
+    message "$num_of_filled_missing missing genotypes were filled";
+    message "Determination based on heterozygous markers: $num_of_heterozygous_select";
     message "Marker comparison times: $total_diff_cal_times"; 
+    hr;
 }
 
 main();
