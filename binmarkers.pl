@@ -30,6 +30,10 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
   -o,--homologous
         Specify homologous genotypes
         Default: ll,nn,hh,kk,a,b
+
+  -m,--missing
+        Specify missing genotypes
+        Default: --,..,-,.,u
         
   -h, --help      print this usage message
   
@@ -42,15 +46,18 @@ my $threshold = 5;
 my $help;
 my @heterozygous_genotype = qw/lm np hk h/;
 my @homologous_genotype = qw/ll nn hh kk a b/;
+my @missing_genotype = qw/-- .. - . u/;
 
 GetOptions(
   "t|threshold=s" => \$threshold,
   "h|help" => \$help,
   "e|heterozygous=s" => \@heterozygous_genotype,
-  "o|homologous=s" => \@homologous_genotype
+  "o|homologous=s" => \@homologous_genotype,
+  "m|missing=s" => \@missing_genotype
 ) or die("Error in command line arguments");
 @heterozygous_genotype = split(/,/,join(',',@heterozygous_genotype));
 @homologous_genotype = split(/,/,join(',',@homologous_genotype));
+@missing_genotype = split(/,/,join(',',@missing_genotype));
 
 usage if $help;
 
@@ -58,7 +65,6 @@ $infile = shift @ARGV;
 usage unless $infile;
 
 my @valid_genotype = (@homologous_genotype, @heterozygous_genotype);
-my @missing_genotype = qw/-- .. - ./;
 my @all_genotypes = (@valid_genotype, @missing_genotype);
 my %is_homologous = map{$_ => 1}@homologous_genotype;
 my %is_heterozygous = map{$_ => 1}@heterozygous_genotype;
@@ -68,7 +74,7 @@ my %is_genotype = map{$_ => 1}@all_genotypes;
 
 my %matrix;
 my @marker_index;
-my $num_of_markers;
+my $num_of_markers = 0;
 my %bin_marker;
 my $num_of_rand_select = 0;
 my $num_of_filled_missing = 0;
@@ -142,6 +148,7 @@ sub print_log{
     print $log_fh @_,"\n";
 }
 
+my $title;
 sub load_marker_matrix{
     my $file = shift;
     open my $fh, $file or die;
@@ -149,7 +156,10 @@ sub load_marker_matrix{
         chomp $marker;
         my $ref = [split /\s+/, $marker];
         my ($scaffold, $position) = split /[\-_]/, $ref->[0];
-        next if with_title $ref;
+        if($num_of_markers == 0 and with_title $ref){
+            $title = "$marker\n";
+            next;
+        }
         checking_genotypes $ref;
         my $index = ++$num_of_markers;
         push @marker_index, $index;
@@ -210,13 +220,14 @@ sub judge_genotype{
     my @all_genotypes = keys %countif;
     my @valid_genotypes = grep{$is_valid{$_}}@all_genotypes;
     my @missing_genotypes = grep{$is_missing{$_}}@all_genotypes;
-    $num_of_filled_missing++ if @missing_genotypes;
     my $result;
     if(@all_genotypes == 1){
         return $all_genotypes[0];
     }elsif(@valid_genotypes == 1){
+        $num_of_filled_missing++ if @missing_genotypes;
         return $valid_genotypes[0];
     }elsif(@valid_genotypes == 2 or @valid_genotypes == 3){
+        $num_of_filled_missing++ if @missing_genotypes;
         return select_genotype(\@valid_genotypes, \%countif);
     }else{die "More than three genotypes? @valid_genotypes"}
 }
@@ -290,6 +301,7 @@ sub cluster_markers{
 sub print_bin_markers{
     my $out_file = shift;
     open my $out_fh, ">", $out_file or die;
+    print $out_fh $title if $title;
     for(sort{$a <=> $b}(keys %bin_marker)){
         print $out_fh join("\t", @{$bin_marker{$_}}), "\n";
     }
@@ -300,7 +312,7 @@ sub print_bin_markers{
 sub print_marker_matrix{
     my $out_file = shift;
     open my $out_fh, ">", $out_file or die;
-    
+    print $out_fh $title if $title;
     for my $block_id (sort {$a <=> $b} keys %block_contents){
         for my $index (@{$block_contents{$block_id}}){
             my $bin_marker_name = $bin_marker{$block_id}->[0];
@@ -338,7 +350,7 @@ sub main{
     hr;
     message "Total number of markers: $num_of_markers";
     message "Bin markers: $num_of_bin_markers";
-    message "$num_of_countif_select genotypes were determined based which present the most";
+    message "$num_of_countif_select genotypes were determined based on which present the most";
     message "$num_of_rand_select genotypes were random determined!";
     message "$num_of_filled_missing missing genotypes were filled";
     message "Determination based on heterozygous markers: $num_of_heterozygous_select";
