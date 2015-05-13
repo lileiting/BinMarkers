@@ -3,6 +3,7 @@
 use warnings;
 use strict;
 use Getopt::Long;
+use Math::CDF;
 
 #--Preset--#
 my $author = "Leiting Li";
@@ -23,17 +24,21 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
         Maximum difference allowed within a block,
         default: 5
 
-  -e,--heterozygous CODE1,CODE2,...
-        Specify heterogygous genotype codes
-        Default: lm,np,hk,h
+  -0,--letter_for_0_0 CODE
+        Specify code for 0/0 SNP
+        Default: a
         
-  -o,--homologous CODE1,CODE2,...
-        Specify homologous genotype codes
-        Default: ll,nn,hh,kk,a,b
+  -1,--letter_for_0_1 CODE
+        Specify code for 0/1 SNP
+        Default: h
+        
+  -2,--letter_for_1_1 CODE
+        Specify code for 1/1 SNP
+        Default: b
 
-  -m,--missing CODE1,CODE2,...
-        Specify missing genotype codes
-        Default: --,..,-,.,u
+  -m,--missing CODE
+        Specify code for missing
+        Default: -
   
   --error_rate_for_0_0 DECIMAL
         Specify the error rate for 0/0 SNP
@@ -57,9 +62,12 @@ EOF
 my $infile;
 my $threshold = 5;
 my $help;
-my @heterozygous_genotype = qw/lm np hk h/;
-my @homologous_genotype = qw/ll nn hh kk a b/;
-my @missing_genotype = qw/-- .. - . u/;
+
+my $letter_for_0_0 = 'a';
+my $letter_for_0_1 = 'h';
+my $letter_for_1_1 = 'b';
+my $letter_for_missing = '-';
+
 my $error_rate_for_0_0 = 0.04;
 my $error_rate_for_0_1 = 0.03;
 my $error_rate_for_1_1 = 0.01;
@@ -67,22 +75,23 @@ my $error_rate_for_1_1 = 0.01;
 GetOptions(
   "t|threshold=i" => \$threshold,
   "h|help" => \$help,
-  "e|heterozygous=s" => \@heterozygous_genotype,
-  "o|homologous=s" => \@homologous_genotype,
-  "m|missing=s" => \@missing_genotype,
+  "0|letter_for_0_0=s" => \$letter_for_0_0,
+  "1|letter_for_0_1=s" => \$letter_for_0_1,
+  "2|letter_for_1_1=s" => \$letter_for_1_1,
+  "m|missing=s" => $letter_for_missing,
   "error_rate_for_0_0=i" => \$error_rate_for_0_0,
   "error_rate_for_0_1=i" => \$error_rate_for_0_1,
   "error_rate_for_1_1=i" => \$error_rate_for_1_1
 ) or die("Error in command line arguments");
-@heterozygous_genotype = split(/,/,join(',',@heterozygous_genotype));
-@homologous_genotype = split(/,/,join(',',@homologous_genotype));
-@missing_genotype = split(/,/,join(',',@missing_genotype));
 
 usage if $help;
 
 $infile = shift @ARGV;
 usage unless $infile;
 
+my @heterozygous_genotype = ($letter_for_0_1);
+my @homologous_genotype = ($letter_for_0_0, $letter_for_1_1);
+my @missing_genotype = ($letter_for_missing);
 my @valid_genotype = (@homologous_genotype, @heterozygous_genotype);
 my @all_genotypes = (@valid_genotype, @missing_genotype);
 my %is_homologous = map{$_ => 1}@homologous_genotype;
