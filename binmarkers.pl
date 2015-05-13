@@ -13,11 +13,11 @@ sub usage{
 
 perl binmarkers.pl <MARKER_MATRIX> [THRESHOLD]
 
-  MARKER_MATRIX  Scafoold/contig and position information
+  MARKER_MATRIX  Scafold/contig and position information
                  as marker name, '-' or '_' as seperator,
 
-  THRESHOLD      Maximum allowed difference allowed 
-                 within a block, default: 5
+  THRESHOLD      Maximum difference allowed within a block,
+                 default: 5
 
 EOF
     exit;
@@ -135,7 +135,6 @@ sub random_select{
     my $n = scalar(@_);
     die unless $n > 0;
     my $random_index = int(rand($n));
-    $num_of_rand_select++;
     return $_[$random_index];
 }
 
@@ -146,6 +145,7 @@ sub equal_case_select{
             return $_;
         }
     }
+    $num_of_rand_select++;
     return random_select(@_);
 }
 
