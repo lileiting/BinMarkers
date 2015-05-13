@@ -19,23 +19,35 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
 
   OPTIONS
   
-  -t,--threshold  
+  -t,--threshold NUM 
         Maximum difference allowed within a block,
         default: 5
 
-  -e,--heterozygous 
-        Specify heterogygous genotypes
+  -e,--heterozygous CODE1,CODE2,...
+        Specify heterogygous genotype codes
         Default: lm,np,hk,h
         
-  -o,--homologous
-        Specify homologous genotypes
+  -o,--homologous CODE1,CODE2,...
+        Specify homologous genotype codes
         Default: ll,nn,hh,kk,a,b
 
-  -m,--missing
-        Specify missing genotypes
+  -m,--missing CODE1,CODE2,...
+        Specify missing genotype codes
         Default: --,..,-,.,u
-        
-  -h, --help      
+  
+  --error_rate_for_0_0 DECIMAL
+        Specify the error rate for 0/0 SNP
+        Default: 0.04
+
+  --error_rate_for_0_1 DECIMAL
+        Specify the error rate for 0/1 SNP
+        Default: 0.03
+
+  --error_rate_for_1_1 DECIMAL
+        Specify the error rate for 0/1 SNP
+        Default: 0.01
+     
+  -h,--help      
         print this usage message
   
 EOF
@@ -48,13 +60,19 @@ my $help;
 my @heterozygous_genotype = qw/lm np hk h/;
 my @homologous_genotype = qw/ll nn hh kk a b/;
 my @missing_genotype = qw/-- .. - . u/;
+my $error_rate_for_0_0 = 0.04;
+my $error_rate_for_0_1 = 0.03;
+my $error_rate_for_1_1 = 0.01;
 
 GetOptions(
-  "t|threshold=s" => \$threshold,
+  "t|threshold=i" => \$threshold,
   "h|help" => \$help,
   "e|heterozygous=s" => \@heterozygous_genotype,
   "o|homologous=s" => \@homologous_genotype,
-  "m|missing=s" => \@missing_genotype
+  "m|missing=s" => \@missing_genotype,
+  "error_rate_for_0_0=i" => \$error_rate_for_0_0,
+  "error_rate_for_0_1=i" => \$error_rate_for_0_1,
+  "error_rate_for_1_1=i" => \$error_rate_for_1_1
 ) or die("Error in command line arguments");
 @heterozygous_genotype = split(/,/,join(',',@heterozygous_genotype));
 @homologous_genotype = split(/,/,join(',',@homologous_genotype));
@@ -105,8 +123,8 @@ sub difference{
     for my $index (1..$#a){
          my $element_a = $a[$index];
          my $element_b = $b[$index];
-         if($is_missing{$element_a} or 
-             $is_missing{$element_b} or 
+         if($is_valid{$element_a} and 
+             $is_valid{$element_b} and 
              $element_a ne $element_b){
             $bin_marker_threshold{$block_id}->{$index}++;
          }
@@ -156,11 +174,13 @@ sub load_marker_matrix{
     while(my $marker = <$fh>){
         chomp $marker;
         my $ref = [split /\s+/, $marker];
-        my ($scaffold, $position) = split /[\-_]/, $ref->[0];
         if($num_of_markers == 0 and with_title $ref){
             $title = "$marker\n";
             next;
         }
+        my ($scaffold, $position) = split /[\-_]/, $ref->[0];
+        die unless ($position =~ /^(\d+).*/);
+        $position = $1;
         checking_genotypes $ref;
         my $index = ++$num_of_markers;
         push @marker_index, $index;
@@ -289,7 +309,7 @@ sub cluster_markers{
         my $pos_info = $block_size == 1 ? 
                            $start_position : 
                            "$start_position-$end_position";
-        my $marker_name = "bin_${start_scaffold}_$pos_info($block_size)";
+        my $marker_name = "${start_scaffold}_$pos_info($block_size)";
         $bin_marker{$block_id} = [$marker_name, consensus_marker($block_id, @block)];
 
         print_log("$marker_name: ", join(", ", map{$matrix{$_}->{array}->[0]}@block));
