@@ -1,9 +1,9 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use warnings;
 use strict;
 use Getopt::Long;
-use Math::CDF;
+use PDL::Stats;
 
 #--Preset--#
 my $author = "Leiting Li";
@@ -21,8 +21,8 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
   OPTIONS
   
   -t,--threshold NUM 
-        Maximum difference allowed within a block,
-        default: 5
+        Maximum difference allowed within a block
+        Default: 5
 
   -0,--letter_for_0_0 CODE
         Specify code for 0/0 SNP
@@ -68,9 +68,9 @@ my $letter_for_0_1 = 'h';
 my $letter_for_1_1 = 'b';
 my $letter_for_missing = '-';
 
-my $error_rate_for_0_0 = 0.04;
-my $error_rate_for_0_1 = 0.03;
-my $error_rate_for_1_1 = 0.01;
+my $error_rate_for_0_0 = 0.04; # a_error
+my $error_rate_for_0_1 = 0.03; # h_error
+my $error_rate_for_1_1 = 0.01; # b_error
 
 GetOptions(
   "t|threshold=i" => \$threshold,
@@ -88,6 +88,10 @@ usage if $help;
 
 $infile = shift @ARGV;
 usage unless $infile;
+
+# Confirm error is [0,1]
+my @error_rates = ($error_rate_for_0_0, $error_rate_for_0_1, $error_rate_for_1_1);
+map{die unless $_ <= 1 and $_ >= 0}@error_rates;
 
 my @heterozygous_genotype = ($letter_for_0_1);
 my @homologous_genotype = ($letter_for_0_0, $letter_for_1_1);
@@ -179,7 +183,7 @@ sub print_log{
 my $title;
 sub load_marker_matrix{
     my $file = shift;
-    open my $fh, $file or die;
+    open my $fh, "<", $file or die;
     while(my $marker = <$fh>){
         chomp $marker;
         my $ref = [split /\s+/, $marker];
@@ -218,29 +222,61 @@ sub equal_case_select{
     return random_select(@_);
 }
 
+sub convert_h_to_a_or_b{
+    my $ref = shift;
+    my @genotypes = map{
+        if($_ eq $letter_for_0_1){
+            random_select($letter_for_0_0, $letter_for_1_1)
+        }else{$_}
+    }@$ref;
+    return @genotypes;
+}
+
+sub count_valid_genotypes{
+    my $n = 0;
+    map{$n++ if $is_valid{$_}}@_;
+    return $n;
+}
+
+sub count_b{
+    my $n = 0;
+    map{$n++ if $_ eq $letter_for_1_1}@_;
+    return $n;
+}
+
 sub select_genotype{
-    my @valid_genotypes = @{$_[0]};
-    my %countif = %{$_[1]};
+    my ($genotypes_array_ref, $valid_genotypes_array_ref, $countif_hash_ref) = @_;
+    my @genotypes = @$genotypes_array_ref;
+    my @valid_genotypes = @{$valid_genotypes_array_ref};
+    my %countif = %{$countif_hash_ref};
     my ($first, $second, $third) = 
         sort{$countif{$b} <=> $countif{$a}} @valid_genotypes;
     
-    if(@valid_genotypes == 2){
-        if($countif{$first} > $countif{$second}){
-            $num_of_countif_select++;
-            return $first;
-        }else{
-            return equal_case_select($first, $second);
-        }
-    }elsif(@valid_genotypes == 3){
-        if($countif{$first} > $countif{$second}){
-            $num_of_countif_select++;
-            return $first;
-        }elsif($countif{$second} > $countif{$third}){
-            return equal_case_select($first, $second);
-        }else{
-            return equal_case_select($first, $second, $third);
-        } 
-    }else{die @valid_genotypes}
+    my $a_letter = $letter_for_0_0;
+    my $h_letter = $letter_for_0_1;
+    my $b_letter = $letter_for_1_1;
+    my $a_error = $error_rate_for_0_0;
+    my $h_error = $error_rate_for_0_1;
+    my $b_error = $error_rate_for_1_1;
+    
+    @genotypes = convert_h_to_a_or_b($genotypes_array_ref);
+    my $num_of_valid_genotypes = count_valid_genotypes(@genotypes);
+    my $num_of_b = count_b(@genotypes);
+    my $a_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, $a_error);
+    my $h_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 0.5 + $h_error/ 2);
+    my $b_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 1 - $b_error);
+    
+    my %prob = ($a_letter => $a_ex_prob, 
+                $h_letter => $h_ex_prob, 
+                $b_letter => $b_ex_prob);
+                
+    my $best_prob_genotype = (sort{$prob{$b} <=> $prob{$a}}(keys %prob))[0];
+    print join('',@genotypes)," => $best_prob_genotype\n";
+    print  "N(b): ", $num_of_b, " N: ", $num_of_valid_genotypes, 
+           " P(a): ", $a_ex_prob, 
+           " P(h): ", $h_ex_prob,
+           " P(b): ", $b_ex_prob, "\n";
+    return $best_prob_genotype;
 }
 
 sub judge_genotype{
@@ -253,12 +289,9 @@ sub judge_genotype{
     my $result;
     if(@all_genotypes == 1){
         return $all_genotypes[0];
-    }elsif(@valid_genotypes == 1){
+    }elsif(@valid_genotypes >= 1 and @valid_genotypes <= 3){
         $num_of_filled_missing++ if @missing_genotypes;
-        return $valid_genotypes[0];
-    }elsif(@valid_genotypes == 2 or @valid_genotypes == 3){
-        $num_of_filled_missing++ if @missing_genotypes;
-        return select_genotype(\@valid_genotypes, \%countif);
+        return select_genotype(\@genotypes, \@valid_genotypes, \%countif);
     }else{die "More than three genotypes? @valid_genotypes"}
 }
 
@@ -355,7 +388,7 @@ sub print_marker_matrix{
 sub hr{message '-' x 60}
 
 sub main{
-    message "Loading marker matrix ...";
+    message "Loading marker matrix from $infile ...";
     load_marker_matrix($infile);
     message "Done! $num_of_markers markers";
 
