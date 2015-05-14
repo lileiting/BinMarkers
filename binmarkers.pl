@@ -247,6 +247,7 @@ sub count_b{
 sub select_genotype{
     my ($genotypes_array_ref, $valid_genotypes_array_ref, $countif_hash_ref) = @_;
     my @genotypes = @$genotypes_array_ref;
+    my $genotypes_str = join('', @genotypes);
     my @valid_genotypes = @{$valid_genotypes_array_ref};
     my %countif = %{$countif_hash_ref};
     my ($first, $second, $third) = 
@@ -259,9 +260,9 @@ sub select_genotype{
     my $h_error = $error_rate_for_0_1;
     my $b_error = $error_rate_for_1_1;
     
-    @genotypes = convert_h_to_a_or_b($genotypes_array_ref);
-    my $num_of_valid_genotypes = count_valid_genotypes(@genotypes);
-    my $num_of_b = count_b(@genotypes);
+    my @converted_genotypes = convert_h_to_a_or_b($genotypes_array_ref);
+    my $num_of_valid_genotypes = count_valid_genotypes(@converted_genotypes);
+    my $num_of_b = count_b(@converted_genotypes);
     my $a_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, $a_error);
     my $h_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 0.5 + $h_error/ 2);
     my $b_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 1 - $b_error);
@@ -271,7 +272,7 @@ sub select_genotype{
                 $b_letter => $b_ex_prob);
                 
     my $best_prob_genotype = (sort{$prob{$b} <=> $prob{$a}}(keys %prob))[0];
-    print join('',@genotypes)," => $best_prob_genotype\n";
+    print $genotypes_str, " => ", join('',@converted_genotypes)," => $best_prob_genotype\n";
     print  "N(b): ", $num_of_b, " N: ", $num_of_valid_genotypes, 
            " P(a): ", $a_ex_prob, 
            " P(h): ", $h_ex_prob,
