@@ -5,5 +5,6 @@ Dependencies
 
 How to install PDL::Stats
 - perl -MCPAN -e shell
+- install PDL
 - install PDL::Stats
 
