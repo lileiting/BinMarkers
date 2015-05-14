@@ -88,6 +88,7 @@ usage if $help;
 
 $infile = shift @ARGV;
 usage unless $infile;
+die "$infile: NOT EXIST!" unless -e $infile;
 
 # Confirm error is [0,1]
 my @error_rates = ($error_rate_for_0_0, $error_rate_for_0_1, $error_rate_for_1_1);
@@ -186,7 +187,7 @@ my $title;
 sub load_marker_matrix{
     my $file = shift;
     my $line_count;
-    open my $fh, "<", $file or die;
+    open my $fh, "<", $file or die "$file: $!";
     while(my $marker = <$fh>){
         $line_count++;
         chomp $marker;
