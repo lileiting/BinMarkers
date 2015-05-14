@@ -116,10 +116,9 @@ my %matrix;
 my @marker_index;
 my $num_of_markers = 0;
 my %bin_marker;
+my $num_of_prob_select = 0;
+my $num_of_aaabbb_type = 0;
 my $num_of_rand_select = 0;
-my $num_of_filled_missing = 0;
-my $num_of_heterozygous_select = 0;
-my $num_of_countif_select = 0;
 
 my $log_file = "$infile.bin_markers_$threshold.log";
 my $bin_markers_file = "$infile.bin_markers_$threshold.map";
@@ -136,19 +135,25 @@ sub print_status{
     }
 }
 
+sub are_diff_genotypes{
+    my($first, $second) = @_;
+    return 0 if $is_missing{$first};
+    return 0 if $is_missing{$second};
+    return 0 if $first eq $second;
+    return 1;
+}
+
 my %bin_marker_threshold;
 my $total_diff_cal_times;
 sub difference{
-    my ($block_id, $a, $b) = @_;
+    my ($block_id, $first, $second) = @_;
     $total_diff_cal_times++;
-    my @a = @{$matrix{$a}->{array}};
-    my @b = @{$matrix{$b}->{array}};
-    for my $index (1..$#a){
-         my $element_a = $a[$index];
-         my $element_b = $b[$index];
-         if($is_valid{$element_a} and 
-             $is_valid{$element_b} and 
-             $element_a ne $element_b){
+    my @first = @{$matrix{$first}->{array}};
+    my @second = @{$matrix{$second}->{array}};
+    for my $index (1..$#first){
+         my $a = $first[$index];
+         my $b = $second[$index];
+         if(are_diff_genotypes($a, $b)){
             $bin_marker_threshold{$block_id}->{$index}++;
          }
     }
@@ -159,11 +164,8 @@ sub difference{
 
 sub with_title{
     my $array = shift;
-    if($is_genotype{$array->[1]}){
-        return 0
-    }else{
-        return 1
-    }
+    my $first_genotype = $array->[1];
+    return $is_genotype{$first_genotype} ? 0 : 1;
 }
 
 sub checking_genotypes{
@@ -227,17 +229,6 @@ sub random_select{
     return $_[$random_index];
 }
 
-sub equal_case_select{
-    for(@_){
-        if($is_heterozygous{$_}){
-            $num_of_heterozygous_select++;
-            return $_;
-        }
-    }
-    $num_of_rand_select++;
-    return random_select(@_);
-}
-
 sub convert_h_to_a_or_b{
     my $ref = shift;
     my $first = random_select($letter_for_0_0, $letter_for_1_1);
@@ -266,7 +257,7 @@ sub count_valid_genotypes{
 
 sub count_b{
     my $n = 0;
-    map{$n++ if $_ eq $letter_for_1_1}@_;
+    map{$n++ if $_ eq $b_letter}@_;
     return $n;
 }
 
@@ -289,10 +280,11 @@ sub select_genotype{
        $genotypes_str =~ 
        /^(($a_letter|$b_letter)\2*)(($a_letter|$b_letter)\4*)$/
     ){
-    	
+        $num_of_aaabbb_type++;
         my($first_part,$first_letter, $second_part, $second_letter) = ($1,$2,$3,$4);
         $equal_case_choose = do{
             if(length($first_part) == length($second_part)){
+                $num_of_rand_select++;
                 random_select($first_letter, $second_letter);
             }elsif(length($first_part) > length($second_part)){
                 $first_letter
@@ -323,7 +315,10 @@ sub select_genotype{
            " P(h): ", $h_ex_prob,
            " P(b): ", $b_ex_prob, "\n";
     if($equal_case_choose){return $equal_case_choose}
-    else{return $best_prob_genotype;}
+    else{
+        $num_of_prob_select++;
+        return $best_prob_genotype;
+    }
 }
 
 sub judge_genotype{
@@ -339,7 +334,6 @@ sub judge_genotype{
     }elsif(@valid_genotypes == 1){
         return $valid_genotypes[0];
     }elsif(@valid_genotypes == 2 or @valid_genotypes == 3){
-        $num_of_filled_missing++ if @missing_genotypes;
         return select_genotype(\@genotypes, \@valid_genotypes, \%countif);
     }else{die "More than three genotypes? @genotypes"}
 }
@@ -459,10 +453,9 @@ sub main{
     hr;
     message "Total number of markers: $num_of_markers";
     message "Bin markers: $num_of_bin_markers";
-    message "$num_of_countif_select genotypes were determined based on which present the most";
-    message "$num_of_rand_select genotypes were random determined!";
-    message "$num_of_filled_missing missing genotypes were filled";
-    message "Determination based on heterozygous markers: $num_of_heterozygous_select";
+    message "$num_of_prob_select genotypes were determined based on probability";
+    message "$num_of_aaabbb_type genotypes were aaabbb style";
+    message "In which, $num_of_rand_select genotypes were random determined!";
     message "Marker comparison times: $total_diff_cal_times"; 
     hr;
 }
