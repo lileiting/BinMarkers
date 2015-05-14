@@ -244,9 +244,14 @@ sub count_b{
     return $n;
 }
 
+sub no_het_genotype{
+    map{return 0 if $is_heterozygous{$_}}@_;
+    return 1;
+}
+
 sub select_genotype{
     my ($genotypes_array_ref, $valid_genotypes_array_ref, $countif_hash_ref) = @_;
-    my @genotypes = @$genotypes_array_ref;
+    my @genotypes = grep{$is_valid{$_}}@$genotypes_array_ref;
     my $genotypes_str = join('', @genotypes);
     my @valid_genotypes = @{$valid_genotypes_array_ref};
     my %countif = %{$countif_hash_ref};
@@ -260,24 +265,44 @@ sub select_genotype{
     my $h_error = $error_rate_for_0_1;
     my $b_error = $error_rate_for_1_1;
     
+    my $equal_case_choose = 0;
+    if(@valid_genotypes == 2 and no_het_genotype(@valid_genotypes) and  
+       $genotypes_str =~ 
+       /^(($a_letter|$b_letter)\2*)(($a_letter|$b_letter)\4*)$/
+    ){
+    	
+        my($first_part,$first_letter, $second_part, $second_letter) = ($1,$2,$3,$4);
+        $equal_case_choose = do{
+            if(length($first_part) == length($second_part)){
+                random_select($first_letter, $second_letter);
+            }elsif(length($first_part) > length($second_part)){
+                $first_letter
+            }else{
+                $second_letter
+            }
+        };
+        #die "$genotypes_str => $equal_case_choose";
+    } 
+    
     my @converted_genotypes = convert_h_to_a_or_b($genotypes_array_ref);
     my $num_of_valid_genotypes = count_valid_genotypes(@converted_genotypes);
     my $num_of_b = count_b(@converted_genotypes);
     my $a_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, $a_error);
     my $h_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 0.5 + $h_error/ 2);
     my $b_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 1 - $b_error);
-    
     my %prob = ($a_letter => $a_ex_prob, 
                 $h_letter => $h_ex_prob, 
                 $b_letter => $b_ex_prob);
-                
     my $best_prob_genotype = (sort{$prob{$b} <=> $prob{$a}}(keys %prob))[0];
-    print $genotypes_str, " => ", join('',@converted_genotypes)," => $best_prob_genotype\n";
-    print  "N(b): ", $num_of_b, " N: ", $num_of_valid_genotypes, 
+    print $genotypes_str, " => ", join('',@converted_genotypes)," => $equal_case_choose| $best_prob_genotype\n";
+    print  "Valid genotypes: ", scalar(@valid_genotypes),
+           " N(b): ", $num_of_b, 
+           " N: ", $num_of_valid_genotypes, 
            " P(a): ", $a_ex_prob, 
            " P(h): ", $h_ex_prob,
            " P(b): ", $b_ex_prob, "\n";
-    return $best_prob_genotype;
+    if($equal_case_choose){return $equal_case_choose}
+    else{return $best_prob_genotype;}
 }
 
 sub judge_genotype{
@@ -290,10 +315,12 @@ sub judge_genotype{
     my $result;
     if(@all_genotypes == 1){
         return $all_genotypes[0];
-    }elsif(@valid_genotypes >= 1 and @valid_genotypes <= 3){
+    }elsif(@valid_genotypes == 1){
+        return $valid_genotypes[0];
+    }elsif(@valid_genotypes == 2 or @valid_genotypes == 3){
         $num_of_filled_missing++ if @missing_genotypes;
         return select_genotype(\@genotypes, \@valid_genotypes, \%countif);
-    }else{die "More than three genotypes? @valid_genotypes"}
+    }else{die "More than three genotypes? @genotypes"}
 }
 
 sub consensus_marker{
