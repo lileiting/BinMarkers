@@ -226,11 +226,21 @@ sub equal_case_select{
 
 sub convert_h_to_a_or_b{
     my $ref = shift;
-    my @genotypes = map{
-        if($_ eq $letter_for_0_1){
-            random_select($letter_for_0_0, $letter_for_1_1)
-        }else{$_}
-    }@$ref;
+    my $first = random_select($letter_for_0_0, $letter_for_1_1);
+    my $second = $first eq $letter_for_0_0 ? $letter_for_1_1 : $letter_for_0_0;
+    my @genotypes;
+    my $i = 0;
+    for(@$ref){
+        my $choice = do{
+            if(   $_ eq $letter_for_0_1 and $i % 2 == 0){
+                $first;
+            }elsif($_ eq $letter_for_0_1 and $i % 2 == 1){
+                $second;
+            }else{$_}
+        };
+        $i++;
+        push @genotypes, $choice;
+    }
     return @genotypes;
 }
 
