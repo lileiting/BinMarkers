@@ -3,7 +3,8 @@
 use warnings;
 use strict;
 use Getopt::Long;
-use PDL::Stats;
+use PDL::LiteF;
+use PDL::Stats::Distr;
 
 #--Preset--#
 my $author = "Leiting Li";
