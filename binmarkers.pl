@@ -63,9 +63,9 @@ my $infile;
 my $threshold = 5;
 my $help;
 
-my $letter_for_0_0 = 'a';
-my $letter_for_0_1 = 'h';
-my $letter_for_1_1 = 'b';
+my $letter_for_0_0 = 'a'; # a_letter
+my $letter_for_0_1 = 'h'; # h_letter
+my $letter_for_1_1 = 'b'; # b_letter
 my $letter_for_missing = '-';
 
 my $error_rate_for_0_0 = 0.04; # a_error
@@ -90,8 +90,15 @@ $infile = shift @ARGV;
 usage unless $infile;
 die "$infile: NOT EXIST!" unless -e $infile;
 
-# Confirm error is [0,1]
-my @error_rates = ($error_rate_for_0_0, $error_rate_for_0_1, $error_rate_for_1_1);
+my $a_letter = $letter_for_0_0;
+my $h_letter = $letter_for_0_1;
+my $b_letter = $letter_for_1_1;
+my $a_error = $error_rate_for_0_0;
+my $h_error = $error_rate_for_0_1;
+my $b_error = $error_rate_for_1_1;
+
+# Confirm error rate range is in [0,1]
+my @error_rates = ($a_error, $h_error, $b_error);
 map{die unless $_ <= 1 and $_ >= 0}@error_rates;
 
 my @heterozygous_genotype = ($letter_for_0_1);
@@ -276,13 +283,6 @@ sub select_genotype{
     my %countif = %{$countif_hash_ref};
     my ($first, $second, $third) = 
         sort{$countif{$b} <=> $countif{$a}} @valid_genotypes;
-    
-    my $a_letter = $letter_for_0_0;
-    my $h_letter = $letter_for_0_1;
-    my $b_letter = $letter_for_1_1;
-    my $a_error = $error_rate_for_0_0;
-    my $h_error = $error_rate_for_0_1;
-    my $b_error = $error_rate_for_1_1;
     
     my $equal_case_choose = 0;
     if(@valid_genotypes == 2 and no_het_genotype(@valid_genotypes) and  
