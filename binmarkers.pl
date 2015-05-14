@@ -380,10 +380,9 @@ sub cluster_markers{
         map{$matrix{$_}->{cluster} = $block_id}@block;
         $block_contents{$block_id} = [@block];
         my $block_size = scalar(@block);
-        my $pos_info = $block_size == 1 ? 
-                           $start_position : 
-                           "$start_position-$end_position";
-        my $marker_name = "${start_scaffold}_$pos_info($block_size)";
+        my $marker_name = $block_size == 1 ? 
+                "${start_scaffold}_$start_position" : 
+                "${start_scaffold}_$start_position-$end_position($block_size)";
         $bin_marker{$block_id} = [$marker_name, consensus_marker($block_id, @block)];
 
         print_log("$marker_name: ", join(", ", map{$matrix{$_}->{array}->[0]}@block));
