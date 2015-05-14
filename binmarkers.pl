@@ -302,10 +302,14 @@ sub select_genotype{
     my $a_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, $a_error);
     my $h_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 0.5 + $h_error/ 2);
     my $b_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 1 - $b_error);
-    my %prob = ($a_letter => $a_ex_prob, 
-                $h_letter => $h_ex_prob, 
-                $b_letter => $b_ex_prob);
-    my $best_prob_genotype = (sort{$prob{$b} <=> $prob{$a}}(keys %prob))[0];
+#    my %prob = ($a_letter => $a_ex_prob, 
+#                $h_letter => $h_ex_prob, 
+#                $b_letter => $b_ex_prob);
+#    my $best_prob_genotype = (sort{$prob{$b} <=> $prob{$a}}(keys %prob))[0];
+    my $best_prob_genotype = $h_ex_prob >= $a_ex_prob ? $h_letter : $a_letter;
+    my $tmp_prob = $h_ex_prob >= $a_ex_prob ? $h_ex_prob : $a_ex_prob;
+    $best_prob_genotype = $tmp_prob >= $b_ex_prob ? $best_prob_genotype : $b_letter;
+
     print $prob_fh "$genotypes_str => ", 
            join('',@converted_genotypes),
            " => $equal_case_choose| $best_prob_genotype\n",
