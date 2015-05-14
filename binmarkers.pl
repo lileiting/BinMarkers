@@ -116,6 +116,8 @@ my $num_of_countif_select = 0;
 my $log_file = "$infile.bin_markers_$threshold.log";
 my $bin_markers_file = "$infile.bin_markers_$threshold.map";
 my $manual_checking_file = "$infile.bin_markers_$threshold.check.txt";
+my $prob_file = "$infile.bin_markers_$threshold.prob.txt";
+open my $prob_fh, ">", $prob_file or die;
 
 my $status_memory = 0;
 sub print_status{
@@ -294,8 +296,10 @@ sub select_genotype{
                 $h_letter => $h_ex_prob, 
                 $b_letter => $b_ex_prob);
     my $best_prob_genotype = (sort{$prob{$b} <=> $prob{$a}}(keys %prob))[0];
-    print $genotypes_str, " => ", join('',@converted_genotypes)," => $equal_case_choose| $best_prob_genotype\n";
-    print  "Valid genotypes: ", scalar(@valid_genotypes),
+    print $prob_fh "$genotypes_str => ", 
+           join('',@converted_genotypes),
+           " => $equal_case_choose| $best_prob_genotype\n",
+           "Valid genotypes: ", scalar(@valid_genotypes),
            " N(b): ", $num_of_b, 
            " N: ", $num_of_valid_genotypes, 
            " P(a): ", $a_ex_prob, 
