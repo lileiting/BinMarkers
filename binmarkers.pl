@@ -354,10 +354,12 @@ sub consensus_marker{
 
 my %block_contents;
 sub cluster_markers{
-    my @sorted_marker_index = sort
-        {$matrix{$a}->{scaffold} cmp $matrix{$b}->{scaffold} or
-         $matrix{$a}->{position} <=> $matrix{$b}->{position}
-        }keys %matrix;
+    #my @sorted_marker_index = sort
+    #    {$matrix{$a}->{scaffold} cmp $matrix{$b}->{scaffold} or
+    #     $matrix{$a}->{position} <=> $matrix{$b}->{position}
+    #    }keys %matrix;
+    my @sorted_marker_index = (1..$num_of_markers);
+    
     my $block_id = 0;
     for (my $i = 0; $i <= $#sorted_marker_index; $i++){
         my $marker_index = $sorted_marker_index[$i];
