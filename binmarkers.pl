@@ -185,11 +185,17 @@ sub print_log{
 my $title;
 sub load_marker_matrix{
     my $file = shift;
+    my $line_count;
     open my $fh, "<", $file or die;
     while(my $marker = <$fh>){
+        $line_count++;
         chomp $marker;
         my $ref = [split /\s+/, $marker];
-        if($num_of_markers == 0 and with_title $ref){
+        if($line_count > 1 and with_title $ref){
+            die "CAUTION: Undefined genotype codes for marker: $marker\n",
+                "Current defined genotypes: @all_genotypes\n";
+        }
+        if($line_count == 1 and with_title $ref){
             $title = "$marker\n";
             next;
         }
