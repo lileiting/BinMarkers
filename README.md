@@ -3,7 +3,8 @@ BinMarkers
 
 Dependencies
 ------
-[pmf_binomial](http://pdl-stats.sourceforge.net/Distr.htm#pmf_binomial) function in Perl module [PDL::Stats](https://metacpan.org/pod/PDL::Stats)
+
+[Perl](http://www.perl.org) programming language and [pmf_binomial](http://pdl-stats.sourceforge.net/Distr.htm#pmf_binomial) function in Perl module [PDL::Stats](https://metacpan.org/pod/PDL::Stats)
 
 Dependencies of PDL::Stats
 
