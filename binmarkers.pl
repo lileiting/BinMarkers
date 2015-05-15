@@ -9,6 +9,7 @@ use PDL::Stats::Distr;
 #--Preset--#
 my $author = "Leiting Li";
 my $version = "20150514";
+my $url= "https://github.com/lileiting/BinMarkers";
 
 sub message {local $\ = "\n"; print STDERR @_}
 sub usage{
