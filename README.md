@@ -2,7 +2,7 @@ BinMarkers
 ======
 
 ### Dependencies
-- [pmf_binomial funtion](http://pdl-stats.sourceforge.net/Distr.htm#pmf_binomial) in [PDL::Stats](https://metacpan.org/pod/PDL::Stats)
+- [pmf_binomial](http://pdl-stats.sourceforge.net/Distr.htm#pmf_binomial) function in Perl Module [PDL::Stats](https://metacpan.org/pod/PDL::Stats)
 
 ### Dependencies of PDL::Stats
 - [PDL](https://metacpan.org/pod/PDL), The Perl Data Language
