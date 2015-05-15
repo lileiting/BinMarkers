@@ -1,7 +1,8 @@
 BinMarkers
 ======
 
-### Dependencies
+Dependencies
+------
 - [pmf_binomial](http://pdl-stats.sourceforge.net/Distr.htm#pmf_binomial) function in Perl module [PDL::Stats](https://metacpan.org/pod/PDL::Stats)
 
 ##### Dependencies of PDL::Stats
@@ -13,7 +14,8 @@ BinMarkers
 - install PDL
 - install PDL::Stats
 
-### How to use BinMarkers
+How to use BinMarkers
+------
 
 ##### Example
 
