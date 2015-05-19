@@ -128,13 +128,13 @@ my $manual_checking_file = "$infile.bin_markers_$threshold.check.txt";
 my $prob_file = "$infile.bin_markers_$threshold.prob.txt";
 open my $prob_fh, ">", $prob_file or die;
 
-my $status_memory = 0;
 sub print_status{
-    my ($current, $total) = @_;
-    if($current / $total * 10 > $status_memory){
+    my ($current, $max, $status_memory) = @_;
+    if($current / $max * 10 > $status_memory){
         $status_memory++;
         message "${status_memory}0%";
     }
+    return $status_memory;
 }
 
 sub are_diff_genotypes{
@@ -366,9 +366,10 @@ sub cluster_markers{
     my @sorted_marker_index = (1..$num_of_markers);
     
     my $block_id = 0;
+    my $status_memory = 0;
     for (my $i = 0; $i <= $#sorted_marker_index; $i++){
         my $marker_index = $sorted_marker_index[$i];
-        print_status($i, $num_of_markers);
+        $status_memory = print_status($i, $num_of_markers, $status_memory);
         my $start_scaffold = $matrix{$marker_index}->{scaffold};
         my $end_scaffold;
         my $start_position = $matrix{$marker_index}->{position};
