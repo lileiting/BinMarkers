@@ -1,6 +1,15 @@
 BinMarkers
 ======
 
+Overview
+------
+
+BinMarkers is a program for creating bin markers from a large set of SNP markers based on their positions on scaffolds/contigs. The purpose of this program is to reduce the number of markers for constructing genetic maps using [Joinmap](http://www.kyazma.nl/index.php/mc.JoinMap/), which limited to about six thousands of markers.
+
+* Author: [Leiting Li](https://github.com/lileiting), [Chenyong Miao](https://github.com/freemao)
+* Email: lileiting@gmail.com
+* Licence: [MIT](http://opensource.org/licenses/MIT)
+
 Dependencies
 ------
 
