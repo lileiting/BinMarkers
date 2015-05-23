@@ -97,26 +97,19 @@ sub read_commands{
     usage unless $infile;
     die "$infile: NOT EXIST!" unless -e $infile;
 
-    my $a_letter = $letter_for_0_0;
-    my $h_letter = $letter_for_0_1;
-    my $b_letter = $letter_for_1_1;
-    my $a_error = $error_rate_for_0_0;
-    my $h_error = $error_rate_for_0_1;
-    my $b_error = $error_rate_for_1_1;
-
     # Confirm error rate range is in [0,1]
-    my @error_rates = ($a_error, $h_error, $b_error);
-    map{die unless $_ <= 1 and $_ >= 0}@error_rates;
+    map{die unless $_ <= 1 and $_ >= 0}
+      ($error_rate_for_0_0, $error_rate_for_0_1, $error_rate_for_1_1);
 
     my %para = (infile => $infile, 
             threshold => $threshold,
-            a_letter => $a_letter,
-            h_letter => $h_letter,
-            b_letter => $b_letter,
+            a_letter => $letter_for_0_0,
+            h_letter => $letter_for_0_1,
+            b_letter => $letter_for_1_1,
             missing => $letter_for_missing,
-            a_error => $a_error,
-            h_error => $h_error,
-            b_error => $b_error
+            a_error => $error_rate_for_0_0,
+            h_error => $error_rate_for_0_1,
+            b_error => $error_rate_for_1_1
             );
     return \%para;
 }
@@ -150,15 +143,6 @@ sub is_genotype{
     return (is_valid($genotype, $para) or is_missing($genotype, $para)) ? 1 : 0; 
 }
 
-sub print_status{
-    my ($current, $max, $status_memory) = @_;
-    if($current / $max * 10 > $status_memory){
-        $status_memory++;
-        message "${status_memory}0%";
-    }
-    return $status_memory;
-}
-
 sub with_title{
     my ($array, $para) = @_;
     
@@ -185,7 +169,7 @@ sub load_marker_matrix{
     
     my $file = $para->{infile};
     my @matrix; 
-    $matrix[0] = "title\ttitle\n"; # First element is the title
+    $matrix[0] = "title\tindividuals\n"; # First element is the title
     
     message "Loading marker matrix from $file ...";
     my $line_count = 0;
@@ -403,6 +387,14 @@ sub not_meet_the_threshold{
     return $difference > $threshold ? 1 : 0;
 }
 
+sub print_status{
+    my ($current, $max, $para) = @_;
+    $para->{clustering_status} = 0 unless defined $para->{clustering_status};
+    if($current / $max * 10 > $para->{clustering_status}){
+        $para->{clustering_status}++;
+        message $para->{clustering_status}."0%";
+    }
+}
 
 sub cluster_markers{
     # This is the main subroutine for clustering
@@ -430,7 +422,7 @@ sub cluster_markers{
     for (my $i = 0; $i <= $#sorted_marker_index; $i++){
         my $first_marker_index = $sorted_marker_index[$i];
         #message "i = $first_marker_index";
-        $status_memory = print_status($i, $num_of_markers, $status_memory);
+        print_status($i, $num_of_markers, $para);
         my $start_scaffold = $matrix->[$first_marker_index]->{scaffold};
         my $end_scaffold = $start_scaffold;
         my $start_position = $matrix->[$first_marker_index]->{position};
