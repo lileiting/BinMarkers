@@ -6,10 +6,9 @@ use Getopt::Long;
 use PDL::LiteF;
 use PDL::Stats::Distr;
 
-#--Preset--#
-my $author = "Leiting Li";
-my $version = "20150514";
-my $url= "https://github.com/lileiting/BinMarkers";
+############################################################
+# Part 1. Usage
+############################################################
 
 sub message {local $\ = "\n"; print STDERR @_}
 sub usage{
@@ -61,72 +60,95 @@ EOF
     exit;
 }
 
-my $infile;
-my $threshold = 5;
-my $help;
+############################################################
+# Part 2. Read commands
+############################################################
 
-my $letter_for_0_0 = 'a'; # a_letter
-my $letter_for_0_1 = 'h'; # h_letter
-my $letter_for_1_1 = 'b'; # b_letter
-my $letter_for_missing = '-';
+sub read_commands{
 
-my $error_rate_for_0_0 = 0.04; # a_error
-my $error_rate_for_0_1 = 0.03; # h_error
-my $error_rate_for_1_1 = 0.01; # b_error
+    my $infile;
+    my $threshold = 5;
+    my $help;
 
-GetOptions(
-  "t|threshold=i" => \$threshold,
-  "h|help" => \$help,
-  "0|letter_for_0_0=s" => \$letter_for_0_0,
-  "1|letter_for_0_1=s" => \$letter_for_0_1,
-  "2|letter_for_1_1=s" => \$letter_for_1_1,
-  "m|missing=s" => $letter_for_missing,
-  "error_rate_for_0_0=i" => \$error_rate_for_0_0,
-  "error_rate_for_0_1=i" => \$error_rate_for_0_1,
-  "error_rate_for_1_1=i" => \$error_rate_for_1_1
-) or die("Error in command line arguments");
+    my $letter_for_0_0 = 'a'; # a_letter
+    my $letter_for_0_1 = 'h'; # h_letter
+    my $letter_for_1_1 = 'b'; # b_letter
+    my $letter_for_missing = '-';
 
-usage if $help;
+    my $error_rate_for_0_0 = 0.04; # a_error
+    my $error_rate_for_0_1 = 0.03; # h_error
+    my $error_rate_for_1_1 = 0.01; # b_error
 
-$infile = shift @ARGV;
-usage unless $infile;
-die "$infile: NOT EXIST!" unless -e $infile;
+    GetOptions(
+      "t|threshold=i" => \$threshold,
+      "h|help" => \$help,
+      "0|letter_for_0_0=s" => \$letter_for_0_0,
+      "1|letter_for_0_1=s" => \$letter_for_0_1,
+      "2|letter_for_1_1=s" => \$letter_for_1_1,
+      "m|missing=s" => \$letter_for_missing,
+      "error_rate_for_0_0=i" => \$error_rate_for_0_0,
+      "error_rate_for_0_1=i" => \$error_rate_for_0_1,
+      "error_rate_for_1_1=i" => \$error_rate_for_1_1
+    ) or die("Error in command line arguments");
 
-my $a_letter = $letter_for_0_0;
-my $h_letter = $letter_for_0_1;
-my $b_letter = $letter_for_1_1;
-my $a_error = $error_rate_for_0_0;
-my $h_error = $error_rate_for_0_1;
-my $b_error = $error_rate_for_1_1;
+    usage if $help;
 
-# Confirm error rate range is in [0,1]
-my @error_rates = ($a_error, $h_error, $b_error);
-map{die unless $_ <= 1 and $_ >= 0}@error_rates;
+    $infile = shift @ARGV;
+    usage unless $infile;
+    die "$infile: NOT EXIST!" unless -e $infile;
 
-my @heterozygous_genotype = ($letter_for_0_1);
-my @homologous_genotype = ($letter_for_0_0, $letter_for_1_1);
-my @missing_genotype = ($letter_for_missing);
-my @valid_genotype = (@homologous_genotype, @heterozygous_genotype);
-my @all_genotypes = (@valid_genotype, @missing_genotype);
-my %is_homologous = map{$_ => 1}@homologous_genotype;
-my %is_heterozygous = map{$_ => 1}@heterozygous_genotype;
-my %is_valid = map{$_ => 1}@valid_genotype;
-my %is_missing = map{$_ => 1}@missing_genotype;
-my %is_genotype = map{$_ => 1}@all_genotypes;
+    my $a_letter = $letter_for_0_0;
+    my $h_letter = $letter_for_0_1;
+    my $b_letter = $letter_for_1_1;
+    my $a_error = $error_rate_for_0_0;
+    my $h_error = $error_rate_for_0_1;
+    my $b_error = $error_rate_for_1_1;
 
-my %matrix;
-my @marker_index;
-my $num_of_markers = 0;
-my %bin_marker;
-my $num_of_prob_select = 0;
-my $num_of_aaabbb_type = 0;
-my $num_of_rand_select = 0;
+    # Confirm error rate range is in [0,1]
+    my @error_rates = ($a_error, $h_error, $b_error);
+    map{die unless $_ <= 1 and $_ >= 0}@error_rates;
 
-my $log_file = "$infile.bin_markers_$threshold.log";
-my $bin_markers_file = "$infile.bin_markers_$threshold.map";
-my $manual_checking_file = "$infile.bin_markers_$threshold.check.txt";
-my $prob_file = "$infile.bin_markers_$threshold.prob.txt";
-open my $prob_fh, ">", $prob_file or die;
+    my %para = (infile => $infile, 
+            threshold => $threshold,
+            a_letter => $a_letter,
+            h_letter => $h_letter,
+            b_letter => $b_letter,
+            missing => $letter_for_missing,
+            a_error => $a_error,
+            h_error => $h_error,
+            b_error => $b_error
+            );
+    return \%para;
+}
+
+############################################################
+# Part 3. Load marker matrix from file
+############################################################
+
+sub is_homologous{
+    my ($genotype, $para) = @_;
+    return ($genotype eq $para->{a_letter} or $genotype eq $para->{b_letter}) ? 1 : 0;
+}
+
+sub is_heterozygous{
+    my ($genotype, $para) = @_; 
+    return $genotype eq $para->{h_letter} ? 1 : 0;
+}
+
+sub is_missing{
+    my ($genotype, $para) = @_;
+    return $genotype eq $para->{missing} ? 1 : 0;
+}
+
+sub is_valid{
+    my ($genotype, $para) = @_;
+    return (is_homologous($genotype,$para) or is_heterozygous($genotype, $para)) ? 1 : 0; 
+}
+
+sub is_genotype{
+    my ($genotype, $para) = @_;
+    return (is_valid($genotype, $para) or is_missing($genotype, $para)) ? 1 : 0; 
+}
 
 sub print_status{
     my ($current, $max, $status_memory) = @_;
@@ -137,92 +159,65 @@ sub print_status{
     return $status_memory;
 }
 
-sub are_diff_genotypes{
-    my($first, $second) = @_;
-    return 0 if $is_missing{$first};
-    return 0 if $is_missing{$second};
-    return 0 if $first eq $second;
-    return 1;
-}
-
-my %bin_marker_threshold;
-my $total_diff_cal_times;
-sub difference{
-    my ($block_id, $first, $second) = @_;
-    $total_diff_cal_times++;
-    my @first = @{$matrix{$first}->{array}};
-    my @second = @{$matrix{$second}->{array}};
-    for my $index (1..$#first){
-         my $a = $first[$index];
-         my $b = $second[$index];
-         if(are_diff_genotypes($a, $b)){
-            $bin_marker_threshold{$block_id}->{$index}++;
-         }
-    }
-    my $difference = keys %{$bin_marker_threshold{$block_id}};
-    #message "Block $block_id: Difference for $a and $b is $difference";
-    return $difference;
-}
-
 sub with_title{
-    my $array = shift;
+    my ($array, $para) = @_;
+    
     my $first_genotype = $array->[1];
-    return $is_genotype{$first_genotype} ? 0 : 1;
+    return is_genotype($first_genotype, $para) ? 0 : 1;
 }
 
 sub checking_genotypes{
-    my $array = shift;
+    my ($array, $para) = @_;
+    
     my @genotypes = @{$array}[1..$#{$array}];
     for (@genotypes){
         die "CAUTION: $_ is not an valid genotype!" 
-            unless $is_genotype{$_};
+            unless is_genotype($_, $para);
     }
 }
 
-sub count_missing{
-    my $array = shift;
-    my @genotypes = @{$array}[1..$#{$array}];
-    my $missing = 0;
-    for(@genotypes){
-        $missing++ if $is_missing{$_}
-    }
-    return $missing;
-}
-
-open my $log_fh, "> $log_file" or die;
-sub print_log{
-    print $log_fh @_,"\n";
-}
-
-my $title;
 sub load_marker_matrix{
-    my $file = shift;
-    my $line_count;
+    my ($stats, $para) = @_;
+    my @all_genotypes = ($para->{a_letter},
+                         $para->{h_letter},
+                         $para->{b_letter},
+                         $para->{missing});
+    
+    my $file = $para->{infile};
+    my @matrix; 
+    $matrix[0] = "title\ttitle\n"; # First element is the title
+    
+    message "Loading marker matrix from $file ...";
+    my $line_count = 0;
+    my $num_of_markers = 0;
     open my $fh, "<", $file or die "$file: $!";
     while(my $marker = <$fh>){
         $line_count++;
         chomp $marker;
         my $ref = [split /\s+/, $marker];
-        if($line_count > 1 and with_title $ref){
-            die "CAUTION: Undefined genotype codes for marker: $marker\n",
-                "Current defined genotypes: @all_genotypes\n";
-        }
-        if($line_count == 1 and with_title $ref){
-            $title = "$marker\n";
+        if($line_count == 1 and with_title($ref, $para)){
+            $matrix[0] = "$marker\n";
             next;
         }
         my ($scaffold, $position) = split /[\-_]/, $ref->[0];
         die unless ($position =~ /^(\d+).*/);
         $position = $1;
-        checking_genotypes $ref;
+        checking_genotypes($ref, $para);
         my $index = ++$num_of_markers;
-        push @marker_index, $index;
-        $matrix{$index}->{array} = $ref;
-        $matrix{$index}->{missing} = count_missing $ref;
-        $matrix{$index}->{scaffold} = $scaffold;
-        $matrix{$index}->{position} = $position;
+        #push @marker_index, $index;
+        $matrix[$index]->{array} = $ref;
+        $matrix[$index]->{scaffold} = $scaffold;
+        $matrix[$index]->{position} = $position;
     }
+    
+    message "Done! $num_of_markers markers";
+    $stats->{markers} = $num_of_markers;
+    return \@matrix;
 }
+
+############################################################
+# Part 4. Clustering
+############################################################
 
 sub random_select{
     my $n = scalar(@_);
@@ -232,16 +227,21 @@ sub random_select{
 }
 
 sub convert_h_to_a_or_b{
-    my $ref = shift;
-    my $first = random_select($letter_for_0_0, $letter_for_1_1);
-    my $second = $first eq $letter_for_0_0 ? $letter_for_1_1 : $letter_for_0_0;
+    my ($ref,$para) = @_;
+    
+    my $a_letter = $para->{a_letter};
+    my $h_letter = $para->{h_letter};
+    my $b_letter = $para->{b_letter};
+    
+    my $first = random_select($a_letter, $b_letter);
+    my $second = $first eq $a_letter ? $b_letter : $a_letter;
     my @genotypes;
     my $i = 0;
     for(@$ref){
         my $choice = do{
-            if(   $_ eq $letter_for_0_1 and $i % 2 == 0){
+            if(   $_ eq $h_letter and $i % 2 == 0){
                 $first;
-            }elsif($_ eq $letter_for_0_1 and $i % 2 == 1){
+            }elsif($_ eq $h_letter and $i % 2 == 1){
                 $second;
             }else{$_}
         };
@@ -252,41 +252,59 @@ sub convert_h_to_a_or_b{
 }
 
 sub count_valid_genotypes{
+    my $para = pop;
+    
     my $n = 0;
-    map{$n++ if $is_valid{$_}}@_;
+    map{$n++ if is_valid($_, $para)}@_;
     return $n;
 }
 
 sub count_b{
+    my $para = pop;
+    
+    my $b_letter = $para->{b_letter};
     my $n = 0;
     map{$n++ if $_ eq $b_letter}@_;
     return $n;
 }
 
 sub no_het_genotype{
-    map{return 0 if $is_heterozygous{$_}}@_;
+    my $para = pop;
+    
+    map{return 0 if is_heterozygous($_, $para)}@_;
     return 1;
 }
 
-sub select_genotype{
-    my ($genotypes_array_ref, $valid_genotypes_array_ref, $countif_hash_ref) = @_;
-    my @genotypes = grep{$is_valid{$_}}@$genotypes_array_ref;
+sub prob_select_genotype{
+    my ($genotypes_array_ref, 
+        $valid_genotypes_array_ref, 
+        $countif_hash_ref, 
+        $stats, $para) = @_;
+    
+    my $a_letter = $para->{a_letter};
+    my $h_letter = $para->{h_letter};
+    my $b_letter = $para->{b_letter};
+    my $a_error = $para->{a_error};
+    my $h_error = $para->{h_error};
+    my $b_error = $para->{b_error};
+        
+    my @genotypes = grep{is_valid($_, $para)}@$genotypes_array_ref;
     my $genotypes_str = join('', @genotypes);
     my @valid_genotypes = @{$valid_genotypes_array_ref};
     my %countif = %{$countif_hash_ref};
     my ($first, $second, $third) = 
         sort{$countif{$b} <=> $countif{$a}} @valid_genotypes;
     
-    my $equal_case_choose = 0;
-    if(@valid_genotypes == 2 and no_het_genotype(@valid_genotypes) and  
+    my $equal_case_choose = '';
+    if(@valid_genotypes == 2 and no_het_genotype(@valid_genotypes, $para) and  
        $genotypes_str =~ 
        /^(($a_letter|$b_letter)\2*)(($a_letter|$b_letter)\4*)$/
     ){
-        $num_of_aaabbb_type++;
+        $stats->{aaabbb_type}++;
         my($first_part,$first_letter, $second_part, $second_letter) = ($1,$2,$3,$4);
         $equal_case_choose = do{
             if(length($first_part) == length($second_part)){
-                $num_of_rand_select++;
+                $stats->{rand_select}++;
                 random_select($first_letter, $second_letter);
             }elsif(length($first_part) > length($second_part)){
                 $first_letter
@@ -297,9 +315,9 @@ sub select_genotype{
         #die "$genotypes_str => $equal_case_choose";
     } 
     
-    my @converted_genotypes = convert_h_to_a_or_b($genotypes_array_ref);
-    my $num_of_valid_genotypes = count_valid_genotypes(@converted_genotypes);
-    my $num_of_b = count_b(@converted_genotypes);
+    my @converted_genotypes = convert_h_to_a_or_b($genotypes_array_ref, $para);
+    my $num_of_valid_genotypes = count_valid_genotypes(@converted_genotypes, $para);
+    my $num_of_b = count_b(@converted_genotypes, $para);
     my $a_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, $a_error);
     my $h_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 0.5 + $h_error/ 2);
     my $b_ex_prob = pmf_binomial($num_of_b, $num_of_valid_genotypes, 1 - $b_error);
@@ -311,7 +329,11 @@ sub select_genotype{
     my $tmp_prob = $h_ex_prob >= $a_ex_prob ? $h_ex_prob : $a_ex_prob;
     $best_prob_genotype = $tmp_prob >= $b_ex_prob ? $best_prob_genotype : $b_letter;
 
-    print $prob_fh "$genotypes_str => ", 
+    unless($para->{prob_fh}){
+        open my $prob_fh, ">", prob_file_name($para);
+        $para->{prob_fh} = $prob_fh;
+    }
+    print {$para->{prob_fh}} "$genotypes_str => ", 
            join('',@converted_genotypes),
            " => $equal_case_choose| $best_prob_genotype\n",
            "Valid genotypes: ", scalar(@valid_genotypes),
@@ -322,151 +344,245 @@ sub select_genotype{
            " P(b): ", $b_ex_prob, "\n";
     if($equal_case_choose){return $equal_case_choose}
     else{
-        $num_of_prob_select++;
+        $stats->{prob_select}++;
         return $best_prob_genotype;
     }
 }
 
 sub judge_genotype{
-    my @genotypes = @{$_[0]};
+    my ($genotypes, $stats, $para) = @_;
+    
+    my @genotypes = @$genotypes;
     my %countif;
     map{$countif{$_}++}@genotypes;
     my @all_genotypes = keys %countif;
-    my @valid_genotypes = grep{$is_valid{$_}}@all_genotypes;
-    my @missing_genotypes = grep{$is_missing{$_}}@all_genotypes;
+    my @valid_genotypes = grep{is_valid($_, $para)}@all_genotypes;
     my $result;
     if(@all_genotypes == 1){
         return $all_genotypes[0];
     }elsif(@valid_genotypes == 1){
         return $valid_genotypes[0];
     }elsif(@valid_genotypes == 2 or @valid_genotypes == 3){
-        return select_genotype(\@genotypes, \@valid_genotypes, \%countif);
+        return prob_select_genotype(\@genotypes, 
+                                    \@valid_genotypes, 
+                                    \%countif, 
+                                    $stats, $para);
     }else{die "More than three genotypes? @genotypes"}
 }
 
-sub consensus_marker{
-    my $block_id = shift;
-    my @marker_indexes = @_;
+sub create_consensus_marker{
+    my($bin_contents, $matrix, $stats, $para) = @_;
     my @consensus_marker;
 
-    my $max_array_index = $#{$matrix{$marker_indexes[0]}->{array}};
+    my $max_array_index = $#{$matrix->[$bin_contents->[0]]->{array}};
     for(my $i = 1; $i <= $max_array_index; $i++){
-        my @genotypes = map{$matrix{$_}->{array}->[$i]}@marker_indexes;
-        push @consensus_marker, judge_genotype(\@genotypes);
+        my @genotypes = map{$matrix->[$_]->{array}->[$i]}@$bin_contents;
+        push @consensus_marker, judge_genotype(\@genotypes, $stats, $para);
     }
     return @consensus_marker;
 }
 
-my %block_contents;
+sub exist_different_genotypes{
+    my $para = pop;
+    my @column = @_;
+    my %genotypes = map{$_ => 1}@column;
+    my @valid_genotypes = grep {is_valid($_, $para)} (keys %genotypes);
+    return scalar(@valid_genotypes) > 1 ? 1 : 0
+}
+
+sub not_meet_the_threshold{
+    my($candidate_marker_index, $bin_contents, $matrix, $stats, $para) = @_;
+    my $max_array_index = scalar(@{$matrix->[$candidate_marker_index]->{array}}) - 1;
+    my $difference = 0;
+    my $threshold = $para->{threshold};
+    for(my $i = 1; $i <= $max_array_index; $i++){
+        my @column = map{$matrix->[$_]->{array}->[$i]}
+                     ($candidate_marker_index, @$bin_contents);
+        $difference++ if exist_different_genotypes(@column, $para);
+    }
+    return $difference > $threshold ? 1 : 0;
+}
+
+
 sub cluster_markers{
+    # This is the main subroutine for clustering
+    # Input: markers matrix[array], stats[hash], para[hash]
+    # Output: bin_marker[hash]
+    #my %block_contents;
+    my ($matrix, $stats, $para) = @_;
+
+    message "Start clustering ...";
+    my $bin_markers = [];
+    $bin_markers->[0] = $matrix->[0]; # First element is title
+    
+    my $log_file = log_file_name($para);
+    open my $log_fh, ">", $log_file or die;
+
     #my @sorted_marker_index = sort
     #    {$matrix{$a}->{scaffold} cmp $matrix{$b}->{scaffold} or
     #     $matrix{$a}->{position} <=> $matrix{$b}->{position}
     #    }keys %matrix;
+    my $num_of_markers = $stats->{markers};
     my @sorted_marker_index = (1..$num_of_markers);
     
-    my $block_id = 0;
+    my $bin_id = 0;
     my $status_memory = 0;
     for (my $i = 0; $i <= $#sorted_marker_index; $i++){
-        my $marker_index = $sorted_marker_index[$i];
+        my $first_marker_index = $sorted_marker_index[$i];
+        #message "i = $first_marker_index";
         $status_memory = print_status($i, $num_of_markers, $status_memory);
-        my $start_scaffold = $matrix{$marker_index}->{scaffold};
-        my $end_scaffold;
-        my $start_position = $matrix{$marker_index}->{position};
+        my $start_scaffold = $matrix->[$first_marker_index]->{scaffold};
+        my $end_scaffold = $start_scaffold;
+        my $start_position = $matrix->[$first_marker_index]->{position};
         my $end_position = $start_position;
 
         #-- Start dynanmic searching 
-        $block_id++;
-        my @block;
-        push @block, $marker_index;
-        LABEL: for(my $j = $i + 1; $j <= $#sorted_marker_index; $j++){
-            my $new_marker_index = $sorted_marker_index[$j];
-            $end_scaffold = $matrix{$new_marker_index}->{scaffold};
+        $bin_id++;
+        #message "Bin ID: $bin_id";
+        my @bin_contents = ($first_marker_index);
+        for(my $j = $i + 1; $j <= $#sorted_marker_index; $j++){
+            my $second_marker_index = $sorted_marker_index[$j];
+            #message "j = $second_marker_index";
+            $end_scaffold = $matrix->[$second_marker_index]->{scaffold};
             
             # Stop searching with these conditions
-            last LABEL if $end_scaffold ne $start_scaffold;
-            for my $index_in_block (@block){
-                my $d = difference($block_id, $index_in_block, $new_marker_index);
-                last LABEL if $d > $threshold;
-            }
+            last if $end_scaffold ne $start_scaffold;
+            last if not_meet_the_threshold(
+                            $second_marker_index, 
+                            \@bin_contents,
+                            $matrix, $stats, $para 
+                            );
             
             # Add a marker to a block
-            push @block, $new_marker_index;
+            push @bin_contents, $second_marker_index;
             $i++;
-            $end_position = $matrix{$new_marker_index}->{position};
+            $end_position = $matrix->[$second_marker_index]->{position};
         }
         #-- End dynamic searching
         
-        map{$matrix{$_}->{cluster} = $block_id}@block;
-        $block_contents{$block_id} = [@block];
-        my $block_size = scalar(@block);
-        my $marker_name = $block_size == 1 ? 
+        # Assign bin ID to each marker
+        map{$matrix->[$_]->{cluster} = $bin_id}@bin_contents;
+        $bin_markers->[$bin_id]->{contents} = [@bin_contents];
+
+        my $bin_size = scalar(@bin_contents);
+        my $marker_name = $bin_size == 1 ? 
                 "${start_scaffold}_$start_position" : 
-                "${start_scaffold}_$start_position-$end_position($block_size)";
-        $bin_marker{$block_id} = [$marker_name, consensus_marker($block_id, @block)];
+                "${start_scaffold}_$start_position-$end_position($bin_size)";
+        $bin_markers->[$bin_id]->{consensus} = [$marker_name, 
+                create_consensus_marker(\@bin_contents, $matrix, $stats, $para)];
 
-        print_log("$marker_name: ", join(", ", map{$matrix{$_}->{array}->[0]}@block));
+        print $log_fh "$marker_name: ", 
+                      join(", ", map{$matrix->[$_]->{array}->[0]}@bin_contents),
+                    "\n";
     }
-    return $block_id;
+    $stats->{bin_markers} = $bin_id;
+    message "Done! $bin_id clusters!";
+    return $bin_markers;
 }
 
-# use $out_file and %bin_marker
+###########################################################
+# Part 5. Print results
+###########################################################
+
 sub print_bin_markers{
-    my $out_file = shift;
-    open my $out_fh, ">", $out_file or die;
-    print $out_fh $title if $title;
-    for(sort{$a <=> $b}(keys %bin_marker)){
-        print $out_fh join("\t", @{$bin_marker{$_}}), "\n";
+    my($matrix, $bin_markers, $para) = @_;
+
+    my $bin_markers_file = bin_markers_file_name($para);
+    open my $out_fh, ">", $bin_markers_file or die;
+    print $out_fh $matrix->[0];
+    for my $index (1..$#{$bin_markers}){
+        print $out_fh join("\t", @{$bin_markers->[$index]->{consensus}}), "\n";
     }
     close $out_fh;
 }
 
-# use %matrix and 
 sub print_marker_matrix{
-    my $out_file = shift;
+    my($matrix, $bin_markers, $para) = @_;
+
+    my $out_file = check_file_name($para);
     open my $out_fh, ">", $out_file or die;
-    print $out_fh $title if $title;
-    for my $block_id (sort {$a <=> $b} keys %block_contents){
-        for my $index (@{$block_contents{$block_id}}){
-            my $bin_marker_name = $bin_marker{$block_id}->[0];
-            print $out_fh "$bin_marker_name|",join("\t", @{$matrix{$index}->{array}}), "\n";
+    print $out_fh $matrix->[0]; # title
+    for my $bin_id (1..$#{$bin_markers}){
+        for my $index (@{$bin_markers->[$bin_id]->{contents}}){
+            my $bin_marker_name = $bin_markers->[$bin_id]->{consensus}->[0];
+            print $out_fh "$bin_marker_name|",
+                          join("\t", @{$matrix->[$index]->{array}}), 
+                          "\n";
         }
-        print $out_fh join("\t", @{$bin_marker{$block_id}}), "\n";
+        print $out_fh join("\t", @{$bin_markers->[$bin_id]->{consensus}}), "\n";
     }
     close $out_fh;
+}
+
+sub get_file_name{
+    my ($suffix, $para) = @_;
+    return join('', $para->{infile}, '.t', $para->{threshold}, $suffix);
+}
+
+sub log_file_name{
+    my $para = shift;
+    return get_file_name(".log", $para);
+}
+
+sub check_file_name{
+    my $para = shift;
+    return get_file_name(".check.txt", $para);
+}
+
+sub bin_markers_file_name{
+    my $para = shift;
+    return get_file_name(".map", $para);
+}
+
+sub prob_file_name{
+    my $para = shift;
+    return get_file_name(".prob.txt", $para);
 }
 
 sub hr{message '-' x 60}
 
-sub main{
-    message "Loading marker matrix from $infile ...";
-    load_marker_matrix($infile);
-    message "Done! $num_of_markers markers";
-
-    message "Start clustering ...";
-    my $num_of_bin_markers = cluster_markers;
-    message "Done! $num_of_bin_markers clusters!";
-
-    message "Print original markers append bin marker name";
-    print_marker_matrix($manual_checking_file);
-    message "Done!";
-
-    message "Print bin markers ...";
-    print_bin_markers($bin_markers_file);
-    message "Done!";
+sub print_stats{
+    my($stats, $para) = @_;
+    my $log_file = log_file_name($para);
+    my $manual_checking_file = check_file_name($para);
+    my $bin_markers_file = bin_markers_file_name($para);
+    my $prob_file = prob_file_name($para);
+    my $num_of_markers = $stats->{markers};
+    my $num_of_bin_markers = $stats->{bin_markers};
+    my $num_of_prob_select = $stats->{prob_select} // 0;
+    my $num_of_aaabbb_type = $stats->{aaabbb_type} // 0;
+    my $num_of_rand_select = $stats->{rand_select} // 0;
+    my $total_diff_cal_times = $stats->{cal_times};
 
     hr;
     message "Some log information is in file: $log_file";
     message "Marker matrix for manual checking is in file: $manual_checking_file";
     message "Final bin markers for further analysis if in file: $bin_markers_file";
+    message "Probability selection inforation in file $prob_file";
     hr;
     message "Total number of markers: $num_of_markers";
     message "Bin markers: $num_of_bin_markers";
     message "$num_of_prob_select genotypes were determined based on probability";
     message "$num_of_aaabbb_type genotypes were aaabbb style";
     message "In which, $num_of_rand_select genotypes were random determined!";
-    message "Marker comparison times: $total_diff_cal_times"; 
     hr;
+}
+
+sub main{
+    my $para = read_commands;
+    my $stats = {};
+    my $matrix = load_marker_matrix($stats, $para);
+    my $bin_markers = cluster_markers($matrix, $stats, $para);
+    
+    message "Print original markers append bin marker name";
+    print_marker_matrix($matrix, $bin_markers, $para);
+    message "Done!";
+
+    message "Print bin markers ...";
+    print_bin_markers($matrix, $bin_markers, $para);
+    message "Done!";
+
+    print_stats($stats, $para);
 }
 
 main();
