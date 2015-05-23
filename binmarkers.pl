@@ -161,7 +161,7 @@ sub checking_genotypes{
 }
 
 sub load_marker_matrix{
-    my ($stats, $para) = @_;
+    my $para = shift;
     my @all_genotypes = ($para->{a_letter},
                          $para->{h_letter},
                          $para->{b_letter},
@@ -195,7 +195,7 @@ sub load_marker_matrix{
     }
     
     message "Done! $num_of_markers markers";
-    $stats->{markers} = $num_of_markers;
+    $para->{stats}->{markers} = $num_of_markers;
     return \@matrix;
 }
 
@@ -263,7 +263,7 @@ sub prob_select_genotype{
     my ($genotypes_array_ref, 
         $valid_genotypes_array_ref, 
         $countif_hash_ref, 
-        $stats, $para) = @_;
+        $para) = @_;
     
     my $a_letter = $para->{a_letter};
     my $h_letter = $para->{h_letter};
@@ -284,11 +284,11 @@ sub prob_select_genotype{
        $genotypes_str =~ 
        /^(($a_letter|$b_letter)\2*)(($a_letter|$b_letter)\4*)$/
     ){
-        $stats->{aaabbb_type}++;
+        $para->{stats}->{aaabbb_type}++;
         my($first_part,$first_letter, $second_part, $second_letter) = ($1,$2,$3,$4);
         $equal_case_choose = do{
             if(length($first_part) == length($second_part)){
-                $stats->{rand_select}++;
+                $para->{stats}->{rand_select}++;
                 random_select($first_letter, $second_letter);
             }elsif(length($first_part) > length($second_part)){
                 $first_letter
@@ -328,13 +328,13 @@ sub prob_select_genotype{
            " P(b): ", $b_ex_prob, "\n";
     if($equal_case_choose){return $equal_case_choose}
     else{
-        $stats->{prob_select}++;
+        $para->{stats}->{prob_select}++;
         return $best_prob_genotype;
     }
 }
 
 sub judge_genotype{
-    my ($genotypes, $stats, $para) = @_;
+    my ($genotypes, $para) = @_;
     
     my @genotypes = @$genotypes;
     my %countif;
@@ -350,18 +350,18 @@ sub judge_genotype{
         return prob_select_genotype(\@genotypes, 
                                     \@valid_genotypes, 
                                     \%countif, 
-                                    $stats, $para);
+                                    $para);
     }else{die "More than three genotypes? @genotypes"}
 }
 
 sub create_consensus_marker{
-    my($bin_contents, $matrix, $stats, $para) = @_;
+    my($bin_contents, $matrix, $para) = @_;
     my @consensus_marker;
 
     my $max_array_index = $#{$matrix->[$bin_contents->[0]]->{array}};
     for(my $i = 1; $i <= $max_array_index; $i++){
         my @genotypes = map{$matrix->[$_]->{array}->[$i]}@$bin_contents;
-        push @consensus_marker, judge_genotype(\@genotypes, $stats, $para);
+        push @consensus_marker, judge_genotype(\@genotypes, $para);
     }
     return @consensus_marker;
 }
@@ -375,7 +375,7 @@ sub exist_different_genotypes{
 }
 
 sub not_meet_the_threshold{
-    my($candidate_marker_index, $bin_contents, $matrix, $stats, $para) = @_;
+    my($candidate_marker_index, $bin_contents, $matrix, $para) = @_;
     my $max_array_index = scalar(@{$matrix->[$candidate_marker_index]->{array}}) - 1;
     my $difference = 0;
     my $threshold = $para->{threshold};
@@ -401,7 +401,7 @@ sub cluster_markers{
     # Input: markers matrix[array], stats[hash], para[hash]
     # Output: bin_marker[hash]
     #my %block_contents;
-    my ($matrix, $stats, $para) = @_;
+    my ($matrix, $para) = @_;
 
     message "Start clustering ...";
     my $bin_markers = [];
@@ -414,7 +414,7 @@ sub cluster_markers{
     #    {$matrix{$a}->{scaffold} cmp $matrix{$b}->{scaffold} or
     #     $matrix{$a}->{position} <=> $matrix{$b}->{position}
     #    }keys %matrix;
-    my $num_of_markers = $stats->{markers};
+    my $num_of_markers = $para->{stats}->{markers};
     my @sorted_marker_index = (1..$num_of_markers);
     
     my $bin_id = 0;
@@ -442,7 +442,7 @@ sub cluster_markers{
             last if not_meet_the_threshold(
                             $second_marker_index, 
                             \@bin_contents,
-                            $matrix, $stats, $para 
+                            $matrix, $para 
                             );
             
             # Add a marker to a block
@@ -461,13 +461,13 @@ sub cluster_markers{
                 "${start_scaffold}_$start_position" : 
                 "${start_scaffold}_$start_position-$end_position($bin_size)";
         $bin_markers->[$bin_id]->{consensus} = [$marker_name, 
-                create_consensus_marker(\@bin_contents, $matrix, $stats, $para)];
+                create_consensus_marker(\@bin_contents, $matrix, $para)];
 
         print $log_fh "$marker_name: ", 
                       join(", ", map{$matrix->[$_]->{array}->[0]}@bin_contents),
                     "\n";
     }
-    $stats->{bin_markers} = $bin_id;
+    $para->{stats}->{bin_markers} = $bin_id;
     message "Done! $bin_id clusters!";
     return $bin_markers;
 }
@@ -534,17 +534,16 @@ sub prob_file_name{
 sub hr{message '-' x 60}
 
 sub print_stats{
-    my($stats, $para) = @_;
+    my $para = shift;
     my $log_file = log_file_name($para);
     my $manual_checking_file = check_file_name($para);
     my $bin_markers_file = bin_markers_file_name($para);
     my $prob_file = prob_file_name($para);
-    my $num_of_markers = $stats->{markers};
-    my $num_of_bin_markers = $stats->{bin_markers};
-    my $num_of_prob_select = $stats->{prob_select} // 0;
-    my $num_of_aaabbb_type = $stats->{aaabbb_type} // 0;
-    my $num_of_rand_select = $stats->{rand_select} // 0;
-    my $total_diff_cal_times = $stats->{cal_times};
+    my $num_of_markers = $para->{stats}->{markers};
+    my $num_of_bin_markers = $para->{stats}->{bin_markers};
+    my $num_of_prob_select = $para->{stats}->{prob_select} // 0;
+    my $num_of_aaabbb_type = $para->{stats}->{aaabbb_type} // 0;
+    my $num_of_rand_select = $para->{stats}->{rand_select} // 0;
 
     hr;
     message "Some log information is in file: $log_file";
@@ -562,9 +561,8 @@ sub print_stats{
 
 sub main{
     my $para = read_commands;
-    my $stats = {};
-    my $matrix = load_marker_matrix($stats, $para);
-    my $bin_markers = cluster_markers($matrix, $stats, $para);
+    my $matrix = load_marker_matrix($para);
+    my $bin_markers = cluster_markers($matrix, $para);
     
     message "Print original markers append bin marker name";
     print_marker_matrix($matrix, $bin_markers, $para);
@@ -574,7 +572,7 @@ sub main{
     print_bin_markers($matrix, $bin_markers, $para);
     message "Done!";
 
-    print_stats($stats, $para);
+    print_stats($para);
 }
 
 main();
