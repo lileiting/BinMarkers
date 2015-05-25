@@ -56,6 +56,8 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
   -h,--help      
         print this usage message
   
+  Source: https://github.com/lileiting/BinMarkers
+
 EOF
     exit;
 }
