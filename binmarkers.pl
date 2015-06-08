@@ -88,9 +88,9 @@ sub read_commands{
       "1|letter_for_0_1=s" => \$letter_for_0_1,
       "2|letter_for_1_1=s" => \$letter_for_1_1,
       "m|missing=s" => \$letter_for_missing,
-      "error_rate_for_0_0=i" => \$error_rate_for_0_0,
-      "error_rate_for_0_1=i" => \$error_rate_for_0_1,
-      "error_rate_for_1_1=i" => \$error_rate_for_1_1
+      "error_rate_for_0_0=f" => \$error_rate_for_0_0,
+      "error_rate_for_0_1=f" => \$error_rate_for_0_1,
+      "error_rate_for_1_1=f" => \$error_rate_for_1_1
     ) or die("Error in command line arguments");
 
     usage if $help;
