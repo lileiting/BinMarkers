@@ -8,7 +8,7 @@ BinMarkers is a program for creating bin markers from a large set of SNP markers
 
 * Author: [Leiting Li](https://github.com/lileiting), [Chenyong Miao](https://github.com/freemao)
 * Email: lileiting@gmail.com
-* Licence: [MIT](http://opensource.org/licenses/MIT)
+* LICENCE: [BSD](http://opensource.org/licenses/bsd-license.php)
 
 Installation
 ------
