@@ -10,6 +10,11 @@ BinMarkers is a program for creating bin markers from a large set of SNP markers
 * Email: lileiting@gmail.com
 * Licence: [MIT](http://opensource.org/licenses/MIT)
 
+Installation
+------
+
+    git clone https://github.com/lileiting/BinMarkers.git
+
 Dependencies
 ------
 
