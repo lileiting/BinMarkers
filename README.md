@@ -45,7 +45,7 @@ name, second is the position, and they were joined by dash or underscore, e.g.
 scaffold1\_12345, scaffold1-12345
 
 The default genotypes are "a" for 0/0, "h" for 0/1, "b" for 1/1, "-" for 
-missingthese could be customized useing -0, -1, -2 and -m options.
+missingthese could be customized using -0, -1, -2 and -m options.
 
 Examples
 
