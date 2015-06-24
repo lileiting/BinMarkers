@@ -34,6 +34,19 @@ How to install PDL::Stats
 How to use BinMarkers
 ------
 
+Input data format
+
+Input data should be a matrix, one marker per line, one individual per column.
+The first line is the title containing individual names, the first column is 
+marker names.
+
+Marker names should contain two parts. First is the scaffold/contig/chromosome 
+name, second is the position, and they were joined by dash or underscore, e.g.
+scaffold1\_12345, scaffold1-12345
+
+The default genotypes are "a" for 0/0, "h" for 0/1, "b" for 1/1, "-" for 
+missingthese could be customized useing -0, -1, -2 and -m options.
+
 Examples
 
     perl binmarkers.pl markers.map -t 5
