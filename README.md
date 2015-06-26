@@ -31,6 +31,17 @@ How to install PDL::Stats
     install PDL
     install PDL::Stats
 
+or
+
+    cpan PDL
+    cpan PDL::Stats
+
+How to install GSL
+
+In Mac OS
+
+    brew install gsl
+
 How to use BinMarkers
 ------
 
