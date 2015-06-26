@@ -36,9 +36,24 @@ or
     cpan PDL
     cpan PDL::Stats
 
+or (if without permission to install)
+
+    sudo cpan PDL
+    sudo cpan PDL::Stats
+
+or
+
+    cpanp -i PDL
+    cpanp -i PDL::Stats
+
+or
+
+    cpanm PDL
+    cpanm PDL::Stats
+
 How to install GSL
 
-In Mac OS
+Use [brew](http://brew.sh) in Mac OS
 
     brew install gsl
 
