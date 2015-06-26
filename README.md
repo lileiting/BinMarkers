@@ -31,7 +31,7 @@ How to install PDL::Stats
     install PDL
     install PDL::Stats
 
-or
+or use cpan
 
     cpan PDL
     cpan PDL::Stats
@@ -41,12 +41,12 @@ or (if without permission to install)
     sudo cpan PDL
     sudo cpan PDL::Stats
 
-or
+or use cpanp
 
     cpanp -i PDL
     cpanp -i PDL::Stats
 
-or
+or use cpanm
 
     cpanm PDL
     cpanm PDL::Stats
@@ -56,6 +56,16 @@ How to install GSL
 Use [brew](http://brew.sh) in Mac OS
 
     brew install gsl
+
+Use yum in CentOS
+
+    sudo yum install gsl
+    sudo yum install gsl-devel
+
+Use apt-get in Ubuntu
+
+    sudo apt-get install libgsl0ldbl
+    sudo apt-get install gsl-bin libgsl0-dev
 
 How to use BinMarkers
 ------
