@@ -10,9 +10,14 @@ use PDL::Stats::Distr;
 # Part 1. Usage
 ############################################################
 
-sub message {local $\ = "\n"; print STDERR @_}
+sub message {
+    my @messages = @_; 
+    local $\ = "\n"; 
+    print STDERR @messages;
+    return 1;
+}
 sub usage{
-    print <<EOF;
+    print <<"EOF";
 
 perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
 
@@ -160,6 +165,7 @@ sub checking_genotypes{
         die "CAUTION: $_ is not an valid genotype!" 
             unless is_genotype($_, $para);
     }
+    return 1;
 }
 
 sub load_marker_matrix{
@@ -195,6 +201,7 @@ sub load_marker_matrix{
         $matrix[$index]->{scaffold} = $scaffold;
         $matrix[$index]->{position} = $position;
     }
+    close $fh;
     
     message "Done! $num_of_markers markers";
     $para->{stats}->{markers} = $num_of_markers;
@@ -206,10 +213,11 @@ sub load_marker_matrix{
 ############################################################
 
 sub random_select{
-    my $n = scalar(@_);
+    my @array = @_;
+    my $n = scalar(@array);
     die unless $n > 0;
     my $random_index = int(rand($n));
-    return $_[$random_index];
+    return $array[$random_index];
 }
 
 sub convert_h_to_a_or_b{
@@ -238,26 +246,29 @@ sub convert_h_to_a_or_b{
 }
 
 sub count_valid_genotypes{
-    my $para = pop;
+    my @genotypes;
+    my $para = pop @genotypes;
     
     my $n = 0;
-    map{$n++ if is_valid($_, $para)}@_;
+    map{$n++ if is_valid($_, $para)}@genotypes;
     return $n;
 }
 
 sub count_b{
-    my $para = pop;
+    my @genotypes = @_;
+    my $para = pop @genotypes;
     
     my $b_letter = $para->{b_letter};
     my $n = 0;
-    map{$n++ if $_ eq $b_letter}@_;
+    map{$n++ if $_ eq $b_letter}@genotypes;
     return $n;
 }
 
 sub no_het_genotype{
+    my @genotypes;
     my $para = pop;
     
-    map{return 0 if is_heterozygous($_, $para)}@_;
+    map{return 0 if is_heterozygous($_, $para)}@genotypes;
     return 1;
 }
 
@@ -369,8 +380,9 @@ sub create_consensus_marker{
 }
 
 sub exist_different_genotypes{
-    my $para = pop;
-    my @column = @_;
+    my @genotypes = @_;
+    my $para = pop @genotypes;
+    my @column = @genotypes;
     my %genotypes = map{$_ => 1}@column;
     my @valid_genotypes = grep {is_valid($_, $para)} (keys %genotypes);
     return scalar(@valid_genotypes) > 1 ? 1 : 0
@@ -396,6 +408,7 @@ sub print_status{
         $para->{clustering_status}++;
         message $para->{clustering_status}."0%";
     }
+    return 1;
 }
 
 sub cluster_markers{
@@ -488,6 +501,7 @@ sub print_bin_markers{
         print $out_fh join("\t", @{$bin_markers->[$index]->{consensus}}), "\n";
     }
     close $out_fh;
+    return 1;
 }
 
 sub print_marker_matrix{
@@ -506,6 +520,7 @@ sub print_marker_matrix{
         print $out_fh join("\t", @{$bin_markers->[$bin_id]->{consensus}}), "\n";
     }
     close $out_fh;
+    return 1;
 }
 
 sub get_file_name{
@@ -533,7 +548,7 @@ sub prob_file_name{
     return get_file_name(".prob.txt", $para);
 }
 
-sub hr{message '-' x 60}
+sub hr{message '-' x 60; return 1;}
 
 sub print_stats{
     my $para = shift;
@@ -559,6 +574,7 @@ sub print_stats{
     message "$num_of_aaabbb_type genotypes were aaabbb style";
     message "In which, $num_of_rand_select genotypes were random determined!";
     hr;
+    return 1;
 }
 
 sub main{
@@ -575,6 +591,11 @@ sub main{
     message "Done!";
 
     print_stats($para);
+
+    return 1;
 }
 
-main();
+main() unless caller;
+
+__END__
+
