@@ -83,6 +83,10 @@ scaffold1\_12345, scaffold1-12345
 The default genotypes are "a" for 0/0, "h" for 0/1, "b" for 1/1, "-" for 
 missingthese could be customized using -0, -1, -2 and -m options.
 
+The default value for threshold is 5, "threshold" means maximum genotype differences
+allowed within a bin marker block, which similar to maximum allowed mismatch in
+sequence alignment.
+
 Examples
 
     perl binmarkers.pl markers.map -t 5
