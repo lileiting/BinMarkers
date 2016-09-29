@@ -220,30 +220,11 @@ sub convert_h_to_a_or_b {
     return @genotypes;
 }
 
-sub count_valid_genotypes {
-    my @genotypes = @_;
-    my $para = pop @genotypes;
-
-    my $n = 0;
-    map { $n++ if exists $para->{is_valid}->{$_} } @genotypes;
-    return $n;
-}
-
-sub count_b {
-    my @genotypes = @_;
-    my $para      = pop @genotypes;
-
-    my $b_letter = $para->{b_letter};
-    my $n        = 0;
-    map { $n++ if $_ eq $b_letter } @genotypes;
-    return $n;
-}
-
 sub no_het_genotype {
     my @genotypes = @_;
     my $para = pop;
 
-    map { return 0 if is_heterozygous( $_, $para ) } @genotypes;
+    map { return 0 if $_ eq $para->{h_letter} } @genotypes;
     return 1;
 }
 
@@ -293,9 +274,13 @@ sub prob_select_genotype {
 
     my @converted_genotypes =
       convert_h_to_a_or_b( $genotypes_array_ref, $para );
-    my $num_of_valid_genotypes =
-      count_valid_genotypes( @converted_genotypes, $para );
-    my $num_of_b = count_b( @converted_genotypes, $para );
+
+    my $num_of_valid_genotypes = 0;
+    my $num_of_b = 0;
+    for (@converted_genotypes){
+        $num_of_valid_genotypes++ if exists $para->{is_valid}->{$_};
+        $num_of_b++ if $_ eq $para->{b_letter};
+    }
 
     die "ERROR: Negative values were passed to  pmf_binomial!"
       if $num_of_b < 0 or $num_of_valid_genotypes < 0;
