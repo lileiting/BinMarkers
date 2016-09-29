@@ -229,7 +229,7 @@ sub convert_h_to_a_or_b {
 }
 
 sub count_valid_genotypes {
-    my @genotypes;
+    my @genotypes = @_;
     my $para = pop @genotypes;
 
     my $n = 0;
