@@ -3,7 +3,6 @@
 use warnings;
 use strict;
 use FindBin;
-use lib "$FindBin::RealBin/lib";
 use Getopt::Long;
 use PDL::LiteF;
 use PDL::Stats::Distr;
@@ -140,13 +139,6 @@ sub read_commands {
 # Part 3. Load marker matrix from file
 ############################################################
 
-sub is_valid {
-    my ( $genotype, $para ) = @_;
-    my %hash = map {$_, 1}($para->{a_letter}, $para->{b_letter},
-        $para->{h_letter});
-    return exists $hash{$genotype} ? 1 : 0;
-}
-
 sub checking_genotypes {
     my ( $array, $para ) = @_;
     my %hash = map{$_, 1}($para->{a_letter}, $para->{b_letter},
@@ -245,7 +237,7 @@ sub count_valid_genotypes {
     my $para = pop @genotypes;
 
     my $n = 0;
-    map { $n++ if is_valid( $_, $para ) } @genotypes;
+    map { $n++ if exists $para->{is_valid}->{$_} } @genotypes;
     return $n;
 }
 
@@ -279,7 +271,7 @@ sub prob_select_genotype {
     my $h_error  = $para->{h_error};
     my $b_error  = $para->{b_error};
 
-    my @genotypes = grep { is_valid( $_, $para ) } @$genotypes_array_ref;
+    my @genotypes = grep { exists $para->{is_valid}->{$_} } @$genotypes_array_ref;
     my $genotypes_str   = join( '', @genotypes );
     my @valid_genotypes = @{$valid_genotypes_array_ref};
     my %countif         = %{$countif_hash_ref};
@@ -362,7 +354,7 @@ sub judge_genotype {
     my %countif;
     map { $countif{$_}++ } @genotypes;
     my @all_genotypes = keys %countif;
-    my @valid_genotypes = grep { is_valid( $_, $para ) } @all_genotypes;
+    my @valid_genotypes = grep { exists $para->{is_valid}->{$_} } @all_genotypes;
     my $result;
     if ( @all_genotypes == 1 ) {
         return $all_genotypes[0];
@@ -394,7 +386,7 @@ sub exist_different_genotypes {
     my $para            = pop @genotypes;
     my @column          = @genotypes;
     my %genotypes       = map { $_ => 1 } @column;
-    my @valid_genotypes = grep { is_valid( $_, $para ) } ( keys %genotypes );
+    my @valid_genotypes = grep { exists $para->{is_valid}->{$_} } ( keys %genotypes );
     return scalar(@valid_genotypes) > 1 ? 1 : 0;
 }
 
