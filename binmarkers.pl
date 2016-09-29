@@ -193,14 +193,6 @@ sub load_marker_matrix {
 # Part 4. Clustering
 ############################################################
 
-sub random_select {
-    my @array = @_;
-    my $n     = scalar(@array);
-    die unless $n > 0;
-    my $random_index = int( rand($n) );
-    return $array[$random_index];
-}
-
 sub convert_h_to_a_or_b {
     my ( $ref, $para ) = @_;
 
@@ -208,7 +200,7 @@ sub convert_h_to_a_or_b {
     my $h_letter = $para->{h_letter};
     my $b_letter = $para->{b_letter};
 
-    my $first = random_select( $a_letter, $b_letter );
+    my $first = ( $a_letter, $b_letter )[ int( rand( 2 ) ) ];
     my $second = $first eq $a_letter ? $b_letter : $a_letter;
     my @genotypes;
     my $i = 0;
@@ -286,7 +278,7 @@ sub prob_select_genotype {
         $equal_case_choose = do {
             if ( length($first_part) == length($second_part) ) {
                 $para->{stats}->{rand_select}++;
-                random_select( $first_letter, $second_letter );
+                ( $first_letter, $second_letter ) [int( rand( 2 ) )];
             }
             elsif ( length($first_part) > length($second_part) ) {
                 $first_letter;
