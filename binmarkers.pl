@@ -248,7 +248,7 @@ sub count_b {
 }
 
 sub no_het_genotype {
-    my @genotypes;
+    my @genotypes = @_;
     my $para = pop;
 
     map { return 0 if is_heterozygous( $_, $para ) } @genotypes;
