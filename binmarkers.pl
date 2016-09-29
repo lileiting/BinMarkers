@@ -2,6 +2,8 @@
 
 use warnings;
 use strict;
+use FindBin;
+use lib "$FindBin::RealBin/lib";
 use Getopt::Long;
 use PDL::LiteF;
 use PDL::Stats::Distr;
@@ -26,19 +28,19 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
                  as marker name, '-' or '_' as seperator,
 
   OPTIONS
-  
-  -t,--threshold NUM 
+
+  -t,--threshold NUM
         Maximum difference allowed within a block
         Default: 5
 
   -0,--letter_for_0_0 CODE
         Specify code for 0/0 SNP
         Default: a
-        
+
   -1,--letter_for_0_1 CODE
         Specify code for 0/1 SNP
         Default: h
-        
+
   -2,--letter_for_1_1 CODE
         Specify code for 1/1 SNP
         Default: b
@@ -46,7 +48,7 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
   -m,--missing CODE
         Specify code for missing
         Default: -
-  
+
   --error_rate_for_0_0 DECIMAL
         Specify the error rate for 0/0 SNP
         Default: 0.04
@@ -58,10 +60,10 @@ perl binmarkers.pl [OPTIONS] <MARKER_MATRIX>
   --error_rate_for_1_1 DECIMAL
         Specify the error rate for 0/1 SNP
         Default: 0.01
-     
-  -h,--help      
+
+  -h,--help
         print this usage message
-  
+
   Source: https://github.com/lileiting/BinMarkers
 
 EOF
@@ -127,52 +129,29 @@ sub read_commands {
 # Part 3. Load marker matrix from file
 ############################################################
 
-sub is_homologous {
-    my ( $genotype, $para ) = @_;
-    return ( $genotype eq $para->{a_letter} or $genotype eq $para->{b_letter} )
-      ? 1
-      : 0;
-}
-
-sub is_heterozygous {
-    my ( $genotype, $para ) = @_;
-    return $genotype eq $para->{h_letter} ? 1 : 0;
-}
-
-sub is_missing {
-    my ( $genotype, $para ) = @_;
-    return $genotype eq $para->{missing} ? 1 : 0;
-}
-
 sub is_valid {
     my ( $genotype, $para ) = @_;
-    return (
-             is_homologous( $genotype, $para )
-          or is_heterozygous( $genotype, $para )
-    ) ? 1 : 0;
-}
-
-sub is_genotype {
-    my ( $genotype, $para ) = @_;
-    return ( is_valid( $genotype, $para ) or is_missing( $genotype, $para ) )
-      ? 1
-      : 0;
+    my %hash = map {$_, 1}($para->{a_letter}, $para->{b_letter},
+        $para->{h_letter});
+    return exists $hash{$genotype} ? 1 : 0;
 }
 
 sub with_title {
     my ( $array, $para ) = @_;
-
     my $first_genotype = $array->[1];
-    return is_genotype( $first_genotype, $para ) ? 0 : 1;
+    my %hash = map{$_, 1}($para->{a_letter}, $para->{b_letter},
+        $para->{h_letter}, $para->{missing});
+    return exists $hash{$first_genotype} ? 0 : 1;
 }
 
 sub checking_genotypes {
     my ( $array, $para ) = @_;
-
+    my %hash = map{$_, 1}($para->{a_letter}, $para->{b_letter},
+        $para->{h_letter}, $para->{missing});
     my @genotypes = @{$array}[ 1 .. $#{$array} ];
     for (@genotypes) {
         die "CAUTION: $_ is not an valid genotype!"
-          unless is_genotype( $_, $para );
+          unless exists $hash{$_};
     }
     return 1;
 }
@@ -194,6 +173,7 @@ sub load_marker_matrix {
     open my $fh, "<", $file or die "$file: $!";
     while ( my $marker = <$fh> ) {
         $line_count++;
+        warn "Loaded $line_count lines ..." if $line_count % 10000 == 0;
         chomp $marker;
         my $ref = [ split /\s+/, $marker ];
         if ( $line_count == 1 and with_title( $ref, $para ) ) {
@@ -333,6 +313,9 @@ sub prob_select_genotype {
     my $num_of_valid_genotypes =
       count_valid_genotypes( @converted_genotypes, $para );
     my $num_of_b = count_b( @converted_genotypes, $para );
+
+    die "ERROR: Negative values were passed to  pmf_binomial!"
+      if $num_of_b < 0 or $num_of_valid_genotypes < 0;
     my $a_ex_prob =
       pmf_binomial( $num_of_b, $num_of_valid_genotypes, $a_error );
     my $h_ex_prob =
@@ -634,4 +617,3 @@ sub main {
 main() unless caller;
 
 __END__
-
