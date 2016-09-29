@@ -139,18 +139,6 @@ sub read_commands {
 # Part 3. Load marker matrix from file
 ############################################################
 
-sub checking_genotypes {
-    my ( $array, $para ) = @_;
-    my %hash = map{$_, 1}($para->{a_letter}, $para->{b_letter},
-        $para->{h_letter}, $para->{missing});
-    my @genotypes = @{$array}[ 1 .. $#{$array} ];
-    for (@genotypes) {
-        die "CAUTION: $_ is not an valid genotype!"
-          unless exists $hash{$_};
-    }
-    return 1;
-}
-
 sub load_marker_matrix {
     my $para          = shift;
     my @all_genotypes = (
@@ -171,15 +159,23 @@ sub load_marker_matrix {
         warn "Loaded $line_count lines ...\n" if $line_count % 1000 == 0;
         chomp $marker;
         my $ref = [ split /\s+/, $marker ];
+
+        # Check if title was present
         if ( $line_count == 1 and exists $para->{is_genotype}->{$ref->[1]} ) {
             $matrix[0] = "$marker\n";
             next;
         }
+
         my ( $scaffold, $position ) = split /[\-_]/, $ref->[0];
-        die unless ( $position =~ /^(\d+).*/ );
+        die unless $position =~ /^(\d+).*/;
         $position = $1;
-        checking_genotypes( $ref, $para );
-        my $index = ++$num_of_markers;
+        for (@{$ref}[1..$#{$ref}]) {
+            die "CAUTION: $_ is not an defined genotype!"
+              unless exists $para->{is_genotype}->{$_};
+        }
+
+        $num_of_markers++;
+        my $index = $num_of_markers;
 
         #push @marker_index, $index;
         $matrix[$index]->{array}    = $ref;
