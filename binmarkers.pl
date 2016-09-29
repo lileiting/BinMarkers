@@ -120,7 +120,18 @@ sub read_commands {
         missing   => $letter_for_missing,
         a_error   => $error_rate_for_0_0,
         h_error   => $error_rate_for_0_1,
-        b_error   => $error_rate_for_1_1
+        b_error   => $error_rate_for_1_1,
+        is_valid  => {
+            $letter_for_0_0 => 1,
+            $letter_for_0_1 => 1,
+            $letter_for_1_1 => 1
+        },
+        is_genotype => {
+            $letter_for_0_0 => 1,
+            $letter_for_0_1 => 1,
+            $letter_for_1_1 => 1,
+            $letter_for_missing => 1
+        }
     );
     return \%para;
 }
@@ -134,14 +145,6 @@ sub is_valid {
     my %hash = map {$_, 1}($para->{a_letter}, $para->{b_letter},
         $para->{h_letter});
     return exists $hash{$genotype} ? 1 : 0;
-}
-
-sub with_title {
-    my ( $array, $para ) = @_;
-    my $first_genotype = $array->[1];
-    my %hash = map{$_, 1}($para->{a_letter}, $para->{b_letter},
-        $para->{h_letter}, $para->{missing});
-    return exists $hash{$first_genotype} ? 0 : 1;
 }
 
 sub checking_genotypes {
@@ -173,10 +176,10 @@ sub load_marker_matrix {
     open my $fh, "<", $file or die "$file: $!";
     while ( my $marker = <$fh> ) {
         $line_count++;
-        warn "Loaded $line_count lines ..." if $line_count % 10000 == 0;
+        warn "Loaded $line_count lines ...\n" if $line_count % 1000 == 0;
         chomp $marker;
         my $ref = [ split /\s+/, $marker ];
-        if ( $line_count == 1 and with_title( $ref, $para ) ) {
+        if ( $line_count == 1 and exists $para->{is_genotype}->{$ref->[1]} ) {
             $matrix[0] = "$marker\n";
             next;
         }
