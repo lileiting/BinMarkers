@@ -110,6 +110,7 @@ sub read_commands {
     map { die unless $_ <= 1 and $_ >= 0 }
       ( $error_rate_for_0_0, $error_rate_for_0_1, $error_rate_for_1_1 );
 
+    my $outfile_prefix            = $infile . '.t' . $threshold;
     my %para = (
         infile    => $infile,
         threshold => $threshold,
@@ -130,7 +131,11 @@ sub read_commands {
             $letter_for_0_1 => 1,
             $letter_for_1_1 => 1,
             $letter_for_missing => 1
-        }
+        },
+        log_file             => $outfile_prefix . '.log',
+        manual_checking_file => $outfile_prefix . '.check.txt',
+        bin_markers_file     => $outfile_prefix . '.map',
+        prob_file            => $outfile_prefix . '.prob.txt'
     );
     return \%para;
 }
@@ -301,7 +306,7 @@ sub prob_select_genotype {
       $tmp_prob >= $b_ex_prob ? $best_prob_genotype : $b_letter;
 
     unless ( $para->{prob_fh} ) {
-        open my $prob_fh, ">", prob_file_name($para);
+        open my $prob_fh, ">", $para->{prob_file};
         $para->{prob_fh} = $prob_fh;
     }
     print { $para->{prob_fh} } "$genotypes_str => ",
@@ -399,8 +404,8 @@ sub cluster_markers {
     my $bin_markers = [];
     $bin_markers->[0] = $matrix->[0];    # First element is title
 
-    my $log_file = log_file_name($para);
-    open my $log_fh, ">", $log_file or die;
+    my $log_file = $para->{log_file};
+    open my $log_fh, ">", $para->{log_file} or die;
 
     #my @sorted_marker_index = sort
     #    {$matrix{$a}->{scaffold} cmp $matrix{$b}->{scaffold} or
@@ -476,7 +481,7 @@ sub cluster_markers {
 sub print_bin_markers {
     my ( $matrix, $bin_markers, $para ) = @_;
 
-    my $bin_markers_file = bin_markers_file_name($para);
+    my $bin_markers_file = $para->{bin_markers_file};
     open my $out_fh, ">", $bin_markers_file or die;
     print $out_fh $matrix->[0];
     for my $index ( 1 .. $#{$bin_markers} ) {
@@ -490,7 +495,7 @@ sub print_bin_markers {
 sub print_marker_matrix {
     my ( $matrix, $bin_markers, $para ) = @_;
 
-    my $out_file = check_file_name($para);
+    my $out_file = $para->{manual_checking_file};
     open my $out_fh, ">", $out_file or die;
     print $out_fh $matrix->[0];    # title
     for my $bin_id ( 1 .. $#{$bin_markers} ) {
@@ -507,39 +512,10 @@ sub print_marker_matrix {
     return 1;
 }
 
-sub get_file_name {
-    my ( $suffix, $para ) = @_;
-    return join( '', $para->{infile}, '.t', $para->{threshold}, $suffix );
-}
-
-sub log_file_name {
-    my $para = shift;
-    return get_file_name( ".log", $para );
-}
-
-sub check_file_name {
-    my $para = shift;
-    return get_file_name( ".check.txt", $para );
-}
-
-sub bin_markers_file_name {
-    my $para = shift;
-    return get_file_name( ".map", $para );
-}
-
-sub prob_file_name {
-    my $para = shift;
-    return get_file_name( ".prob.txt", $para );
-}
-
 sub hr { message '-' x 60; return 1; }
 
 sub print_stats {
-    my $para                 = shift;
-    my $log_file             = log_file_name($para);
-    my $manual_checking_file = check_file_name($para);
-    my $bin_markers_file     = bin_markers_file_name($para);
-    my $prob_file            = prob_file_name($para);
+    my $para                      = shift;
     my $num_of_markers       = $para->{stats}->{markers};
     my $num_of_bin_markers   = $para->{stats}->{bin_markers};
     my $num_of_prob_select   = $para->{stats}->{prob_select} // 0;
@@ -547,12 +523,12 @@ sub print_stats {
     my $num_of_rand_select   = $para->{stats}->{rand_select} // 0;
 
     hr;
-    message "Some log information is in file: $log_file";
+    message "Some log information is in file: $para->{log_file}";
     message
-      "Marker matrix for manual checking is in file: $manual_checking_file";
+      "Marker matrix for manual checking is in file: $para->{manual_checking_file}";
     message
-      "Final bin markers for further analysis if in file: $bin_markers_file";
-    message "Probability selection inforation in file $prob_file";
+      "Final bin markers for further analysis if in file: $para->{bin_markers_file}";
+    message "Probability selection inforation in file $para->{prob_file}";
     hr;
     message "Total number of markers: $num_of_markers";
     message "Bin markers: $num_of_bin_markers";
