@@ -2,7 +2,6 @@
 
 use warnings;
 use strict;
-use FindBin;
 use Getopt::Long;
 use PDL::LiteF;
 use PDL::Stats::Distr;
