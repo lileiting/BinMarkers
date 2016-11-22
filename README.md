@@ -1,6 +1,8 @@
 BinMarkers
 ======
 
+The 2.0 version([BinMarkers-v2](https://github.com/lileiting/BinMarkers-v2)) do not require the installation of PDL and GSL.
+
 Overview
 ------
 
